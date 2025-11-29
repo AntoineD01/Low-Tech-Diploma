@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mes diplômes</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 30px auto; }
+        ul { list-style:none; padding:0; }
+        li { margin-bottom: 15px; }
+        a { background:#4CAF50; color:white; padding:5px 10px; text-decoration:none; }
+        b { color:red; }
+    </style>
+</head>
+<body>
+
+<!-- Menu de navigation -->
+<nav style="margin-bottom:20px;">
+    <a href="index.html" style="margin-right:10px;">Accueil</a>
+    <a href="issue.html" style="margin-right:10px;">Émettre un diplôme</a>
+    <a href="my_diplomas.html" style="margin-right:10px;">Mes diplômes</a>
+    <a href="verify.html">Vérifier un diplôme</a>
+    <hr>
+</nav>
+
+<h2>Mes diplômes</h2>
+<div id="list">Chargement…</div>
+
+<script>
+async function loadDiplomas() {
+    const res = await fetch("http://127.0.0.1:5000/list");
+    const diplomas = await res.json();
+    if (!diplomas.length) {
+        list.innerHTML = "Aucun diplôme trouvé.";
+        return;
+    }
+    let html = "<ul>";
+    diplomas.forEach(d => {
+        html += `<li>
+            ${d.student_name} – ${d.degree_name} – ${d.issued_at}
+            <a href="http://127.0.0.1:5000/download/${d.filename}" target="_blank">Télécharger</a>
+            ${d.revoked ? "<b>(Révoqué)</b>" : ""}
+        </li>`;
+    });
+    html += "</ul>";
+    list.innerHTML = html;
+}
+
+loadDiplomas();
+</script>
+
+</body>
+</html>

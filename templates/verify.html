@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Vérifier un diplôme</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 30px auto; }
+        pre { background:#eee; padding:10px; white-space:pre-wrap; }
+    </style>
+</head>
+<body>
+
+<!-- Menu de navigation -->
+<nav style="margin-bottom:20px;">
+    <a href="index.html" style="margin-right:10px;">Accueil</a>
+    <a href="issue.html" style="margin-right:10px;">Émettre un diplôme</a>
+    <a href="my_diplomas.html" style="margin-right:10px;">Mes diplômes</a>
+    <a href="verify.html">Vérifier un diplôme</a>
+    <hr>
+</nav>
+
+<h2>Vérifier un diplôme</h2>
+
+<input type="file" id="fileInput" accept=".json">
+<button onclick="verify()">Vérifier</button>
+
+<pre id="output">Aucun.</pre>
+
+<script>
+async function verify() {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const jsonData = JSON.parse(text);
+    const res = await fetch("http://127.0.0.1:5000/verify", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(jsonData)
+    });
+    const result = await res.json();
+    output.textContent = JSON.stringify(result, null, 2);
+}
+</script>
+
+</body>
+</html>

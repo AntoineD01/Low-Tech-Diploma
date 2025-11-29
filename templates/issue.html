@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Émettre un diplôme</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 30px auto; }
+        label { display:block; margin-top:10px; }
+        input, button { width:100%; padding:10px; margin-top:5px; }
+        button { background:#4CAF50; color:white; border:none; }
+        pre { background:#eee; padding:10px; white-space:pre-wrap; }
+        hr { margin:30px 0; }
+    </style>
+</head>
+<body>
+
+<!-- Menu de navigation -->
+<nav style="margin-bottom:20px;">
+    <a href="index.html" style="margin-right:10px;">Accueil</a>
+    <a href="issue.html" style="margin-right:10px;">Émettre un diplôme</a>
+    <a href="my_diplomas.html" style="margin-right:10px;">Mes diplômes</a>
+    <a href="verify.html">Vérifier un diplôme</a>
+    <hr>
+</nav>
+
+<h2>Émettre un diplôme</h2>
+
+<form id="issueForm">
+    <label>Nom de l'étudiant</label>
+    <input type="text" id="student_name" required>
+
+    <label>Nom du diplôme</label>
+    <input type="text" id="degree_name" required>
+
+    <button type="submit">Émettre</button>
+</form>
+
+<h3>Résultat :</h3>
+<pre id="issueResult">Aucun.</pre>
+
+<hr>
+
+<h2>Révoquer un diplôme</h2>
+
+<form id="revokeForm">
+    <label>ID du diplôme à révoquer</label>
+    <input type="text" id="diploma_id" required>
+
+    <button type="submit" style="background:#e53935;">Révoquer</button>
+</form>
+
+<pre id="revokeResult">Aucun.</pre>
+
+<script>
+document.getElementById("issueForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+        student_name: student_name.value,
+        degree_name: degree_name.value
+    };
+    const res = await fetch("http://127.0.0.1:5000/issue", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    issueResult.textContent = JSON.stringify(json, null, 2);
+});
+
+document.getElementById("revokeForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = { id: diploma_id.value };
+    const res = await fetch("http://127.0.0.1:5000/revoke", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    revokeResult.textContent = JSON.stringify(json, null, 2);
+});
+</script>
+
+</body>
+</html>
