@@ -6,6 +6,9 @@ from cryptography.hazmat.primitives import serialization
 from datetime import datetime
 import uuid
 import sys
+import jwt
+SECRET = "SUPER_SECRET_KEY_CHANGE_ME"
+from functools import wraps
 
 app = Flask(__name__)
 CORS(app)
@@ -27,10 +30,34 @@ with open(clé_privée, "rb") as f:
 with open(clé_publique, "rb") as f:
     PUBLIC_KEY = serialization.load_pem_public_key(f.read())
 
+def auth_required(role=None):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = request.headers.get("Authorization")
+
+            if not token:
+                return jsonify({"error": "Missing token"}), 401
+
+            try:
+                decoded = jwt.decode(token, SECRET, algorithms=["HS256"])
+            except Exception:
+                return jsonify({"error": "Invalid token"}), 401
+
+            # Vérifier le rôle si demandé
+            if role and decoded.get("role") != role:
+                return jsonify({"error": "Forbidden"}), 403
+
+            request.user = decoded
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
 # -------------------------------------------
 # 1. Émission d'un diplôme
 # -------------------------------------------
 @app.route("/issue", methods=["POST"])
+@auth_required(role="school")
 def issue():
     data = request.json
     
@@ -134,6 +161,7 @@ def verify():
 # 4. Révocation d'un diplôme
 # -------------------------------------------
 @app.route("/revoke", methods=["POST"])
+@auth_required(role="school")
 def revoke():
     data = request.json
     diploma_id = data.get("id")
@@ -180,6 +208,34 @@ def list_diplomas():
 @app.route("/download/<filename>", methods=["GET"])
 def download_diploma(filename):
     return send_from_directory("diplomas", filename)
+
+# -------------------------------------------
+# 6. Login sur le site (simple JWT)
+# -------------------------------------------
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+
+    # Charger les utilisateurs
+    with open("users.json", "r") as f:
+        users = json.load(f)["users"]
+
+    for user in users:
+        if user["username"] == username and user["password"] == password:
+            token = jwt.encode(
+                {
+                    "username": username,
+                    "role": user["role"],
+                },
+                SECRET,
+                algorithm="HS256"
+            )
+            return jsonify({"token": token})
+
+    return jsonify({"error": "Invalid credentials"}), 401
+
 
 # -------------------------------------------
 # Lancer le serveur
