@@ -109,6 +109,7 @@ def issue():
 # 2. Récupération d'un diplôme
 # -------------------------------------------
 @app.route("/diploma/<id>", methods=["GET"])
+@auth_required()
 def get_diploma(id):
     path = f"diplomas/{id}.json"
     if not os.path.exists(path):
@@ -116,7 +117,19 @@ def get_diploma(id):
         
     with open(path) as f:
         diploma = json.load(f)
-        
+
+    # Vérification du rôle
+    user = request.user
+
+    # L'école a accès à tout
+    if user["role"] == "school":
+        return jsonify(diploma)
+    
+    # Le titulaire ne peut voir QUE son propre diplôme
+    if user["role"] == "holder":
+        if user["username"] != diploma["student_name"]:
+            return jsonify({"error": "Forbidden"}), 403
+
     return jsonify(diploma)
 
 
