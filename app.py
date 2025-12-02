@@ -220,7 +220,9 @@ def list_diplomas():
 # -------------------------------------------
 @app.route("/download/<filename>", methods=["GET"])
 def download_diploma(filename):
-    return send_from_directory("diplomas", filename)
+    # Update the path to the diplomas directory
+    diplomas_dir = os.path.join(script_dir, "..", "diplomas")
+    return send_from_directory(diplomas_dir, filename)
 
 # -------------------------------------------
 # 6. Login sur le site (simple JWT)
