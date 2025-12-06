@@ -139,13 +139,25 @@ def get_diploma(id):
 def verify():
     diploma = request.json
 
+    # Charger le registre
+    found = False
+    revoked = False
     if os.path.exists(REGISTRY_FILE):
         with open(REGISTRY_FILE, "r") as f:
             registry = json.load(f)
         for d in registry["diplomas"]:
-            if d["filename"] == f"{diploma['id']}.json" and d.get("revoked"):
-                return jsonify({"valid": False, "reason": "revoked"})
+            if d["filename"] == f"{diploma['id']}.json":
+                found = True
+                revoked = d.get("revoked", False)
+                break
 
+    if not found:
+        return jsonify({"valid": False, "reason": "unknown diploma"})
+
+    if revoked:
+        return jsonify({"valid": False, "reason": "revoked diploma"})
+
+    # Vérifier la signature
     signature = base64.b64decode(diploma["signature"])
     unsigned = diploma.copy()
     del unsigned["signature"]
@@ -155,7 +167,8 @@ def verify():
         PUBLIC_KEY.verify(signature, payload)
         return jsonify({"valid": True})
     except Exception:
-        return jsonify({"valid": False})
+        return jsonify({"valid": False, "reason": "invalid signature"})
+
 
 # -----------------------------
 # REVOKE
