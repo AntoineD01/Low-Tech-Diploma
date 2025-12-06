@@ -209,18 +209,16 @@ def list_diplomas():
 
     user = request.user
 
-    # School sees everything
     if user["role"] == "school":
-        return jsonify(registry["diplomas"])
+        # School voit tous les diplômes
+        diplomas = registry["diplomas"]
+    elif user["role"] == "student":
+        # Student voit uniquement ses diplômes
+        diplomas = [d for d in registry["diplomas"] if d["student_name"] == user["username"]]
+    else:
+        diplomas = []
 
-    # Student sees only their diplomas
-    student_only = [
-        d for d in registry["diplomas"]
-        if d["student_name"] == user["username"]
-    ]
-
-    return jsonify(student_only)
-
+    return jsonify(diplomas)
 
 # -----------------------------
 # DOWNLOAD

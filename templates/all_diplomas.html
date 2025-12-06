@@ -2,12 +2,14 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Mes diplômes</title>
+    <title>Tous les diplômes</title>
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 30px auto; }
+        body { font-family: Arial; max-width: 800px; margin: 30px auto; }
         ul { list-style:none; padding:0; }
-        li { margin-bottom: 15px; }
-        button { background:#4CAF50; color:white; padding:5px 10px; border:none; cursor:pointer; }
+        li { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        button { margin-left: 5px; padding: 5px 10px; border: none; cursor: pointer; color: white; }
+        .download { background: #4CAF50; }
+        .revoke { background: #e53935; }
         b { color:red; }
     </style>
 </head>
@@ -19,9 +21,7 @@ const token = localStorage.getItem("token");
 if (!token) window.location.href = "login.html";
 
 const payload = JSON.parse(atob(token.split(".")[1]));
-if (payload.role === "school") {
-    window.location.href = "all_diplomas.html";
-} else if (payload.role !== "student") {
+if (payload.role !== "school") {
     alert("Accès interdit");
     window.location.href = "index.html";
 }
@@ -30,12 +30,13 @@ if (payload.role === "school") {
 <!-- Menu de navigation -->
 <nav style="margin-bottom:20px;">
     <a href="index.html" style="margin-right:10px;">Accueil</a>
-    <a href="my_diplomas.html" style="margin-right:10px;">Mes diplômes</a>
+    <a href="all_diplomas.html" style="margin-right:10px;">Tous les diplômes</a>
+    <a href="issue.html" style="margin-right:10px;">Émettre un diplôme</a>
     <button onclick="logout()">Déconnexion</button>
     <hr>
 </nav>
 
-<h2>Mes diplômes</h2>
+<h2>Tous les diplômes</h2>
 <div id="list">Chargement…</div>
 
 <script>
@@ -43,26 +44,19 @@ async function loadDiplomas() {
     const res = await fetch("http://127.0.0.1:5000/list", {
         headers: { "Authorization": token }
     });
-
     const diplomas = await res.json();
+
     if (!diplomas.length) {
         list.innerHTML = "Aucun diplôme trouvé.";
         return;
     }
 
-    // Afficher seulement les diplômes de l'étudiant connecté
-    const myDiplomas = diplomas.filter(d => d.student_name === payload.username);
-
-    if (!myDiplomas.length) {
-        list.innerHTML = "Aucun diplôme trouvé.";
-        return;
-    }
-
     let html = "<ul>";
-    myDiplomas.forEach(d => {
+    diplomas.forEach(d => {
         html += `<li>
-            ${d.student_name} – ${d.degree_name} – ${d.issued_at}
-            <button onclick="download('${d.filename}')">Télécharger</button>
+            <strong>${d.student_name}</strong> – ${d.degree_name} – ${d.issued_at}
+            <button class="download" onclick="download('${d.filename}')">Télécharger</button>
+            <button class="revoke" onclick="revoke('${d.filename}')">Révoquer</button>
             ${d.revoked ? "<b>(Révoqué)</b>" : ""}
         </li>`;
     });
@@ -86,6 +80,22 @@ async function download(filename) {
     a.href = url;
     a.download = filename;
     a.click();
+}
+
+async function revoke(filename) {
+    const id = filename.replace(".json","");
+    const res = await fetch("http://127.0.0.1:5000/revoke", {
+        method: "POST",
+        headers: { 
+            "Content-Type": "application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({ id })
+    });
+
+    const result = await res.json();
+    alert(result.status === "ok" ? "Diplôme révoqué" : "Erreur");
+    loadDiplomas();
 }
 
 function logout() {

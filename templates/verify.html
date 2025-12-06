@@ -6,6 +6,8 @@
     <style>
         body { font-family: Arial; max-width: 600px; margin: 30px auto; }
         pre { background:#eee; padding:10px; white-space:pre-wrap; }
+        .valid { color: green; }
+        .invalid { color: red; }
     </style>
 </head>
 <body>
@@ -29,16 +31,34 @@
 <script>
 async function verify() {
     const file = fileInput.files[0];
-    if (!file) return;
+    if (!file) return alert("Veuillez sélectionner un fichier.");
+
     const text = await file.text();
-    const jsonData = JSON.parse(text);
+    let jsonData;
+    try {
+        jsonData = JSON.parse(text);
+    } catch (e) {
+        output.textContent = "Fichier JSON invalide";
+        output.className = "invalid";
+        return;
+    }
+
     const res = await fetch("http://127.0.0.1:5000/verify", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify(jsonData)
     });
+
     const result = await res.json();
-    output.textContent = JSON.stringify(result, null, 2);
+
+    if (result.valid) {
+        output.textContent = "Diplôme valide ✅";
+        output.className = "valid";
+    } else {
+        const reason = result.reason || "inconnue";
+        output.textContent = `Diplôme invalide ❌\nRaison : ${reason}`;
+        output.className = "invalid";
+    }
 }
 </script>
 
