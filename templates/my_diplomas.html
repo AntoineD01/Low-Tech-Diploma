@@ -7,19 +7,20 @@
         body { font-family: Arial; max-width: 600px; margin: 30px auto; }
         ul { list-style:none; padding:0; }
         li { margin-bottom: 15px; }
-        a { background:#4CAF50; color:white; padding:5px 10px; text-decoration:none; }
+        button { background:#4CAF50; color:white; padding:5px 10px; border:none; cursor:pointer; }
         b { color:red; }
     </style>
 </head>
 <body>
 
+<!-- Vérification JWT -->
 <script>
 const token = localStorage.getItem("token");
 if (!token) window.location.href = "login.html";
 
 const payload = JSON.parse(atob(token.split(".")[1]));
-if (payload.role !== "holder") {
-    alert("Access denied");
+if (payload.role !== "student") {
+    alert("Accès interdit");
     window.location.href = "index.html";
 }
 </script>
@@ -27,9 +28,8 @@ if (payload.role !== "holder") {
 <!-- Menu de navigation -->
 <nav style="margin-bottom:20px;">
     <a href="index.html" style="margin-right:10px;">Accueil</a>
-    <a href="issue.html" style="margin-right:10px;">Émettre un diplôme</a>
     <a href="my_diplomas.html" style="margin-right:10px;">Mes diplômes</a>
-    <a href="verify.html">Vérifier un diplôme</a>
+    <button onclick="logout()">Déconnexion</button>
     <hr>
 </nav>
 
@@ -39,25 +39,56 @@ if (payload.role !== "holder") {
 <script>
 async function loadDiplomas() {
     const res = await fetch("http://127.0.0.1:5000/list", {
-    headers: {
-        "Authorization": token
-    }
+        headers: { "Authorization": token }
     });
+
     const diplomas = await res.json();
     if (!diplomas.length) {
         list.innerHTML = "Aucun diplôme trouvé.";
         return;
     }
+
+    // Afficher seulement les diplômes de l'étudiant connecté
+    const myDiplomas = diplomas.filter(d => d.student_name === payload.username);
+
+    if (!myDiplomas.length) {
+        list.innerHTML = "Aucun diplôme trouvé.";
+        return;
+    }
+
     let html = "<ul>";
-    diplomas.forEach(d => {
+    myDiplomas.forEach(d => {
         html += `<li>
             ${d.student_name} – ${d.degree_name} – ${d.issued_at}
-            <a href="http://127.0.0.1:5000/download/${d.filename}" target="_blank">Télécharger</a>
+            <button onclick="download('${d.filename}')">Télécharger</button>
             ${d.revoked ? "<b>(Révoqué)</b>" : ""}
         </li>`;
     });
     html += "</ul>";
     list.innerHTML = html;
+}
+
+async function download(filename) {
+    const res = await fetch(`http://127.0.0.1:5000/download/${filename}`, {
+        headers: { "Authorization": token }
+    });
+
+    if (!res.ok) {
+        alert("Erreur lors du téléchargement");
+        return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
 }
 
 loadDiplomas();
