@@ -1,0 +1,19 @@
+# Dossier des clés cryptographiques
+keys/
+
+# Données sensibles
+registry.json
+users.json
+
+# Fichiers de diplômes
+diplomas/
+
+# Environnements Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environnements virtuels
+venv/
+.env
