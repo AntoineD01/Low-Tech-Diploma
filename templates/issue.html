@@ -14,6 +14,17 @@
 </head>
 <body>
 
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "login.html";
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+if (payload.role !== "school") {
+    alert("Access denied");
+    window.location.href = "index.html";
+}
+</script>
+
 <!-- Menu de navigation -->
 <nav style="margin-bottom:20px;">
     <a href="index.html" style="margin-right:10px;">Accueil</a>
@@ -59,9 +70,12 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
         degree_name: degree_name.value
     };
     const res = await fetch("http://127.0.0.1:5000/issue", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
+    method: "POST",
+    headers: {
+        "Content-Type":"application/json",
+        "Authorization": token
+    },
+    body: JSON.stringify(payload)
     });
     const json = await res.json();
     issueResult.textContent = JSON.stringify(json, null, 2);
@@ -71,9 +85,12 @@ document.getElementById("revokeForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const payload = { id: diploma_id.value };
     const res = await fetch("http://127.0.0.1:5000/revoke", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
+    method: "POST",
+    headers: {
+        "Content-Type":"application/json",
+        "Authorization": token
+    },
+    body: JSON.stringify(payload)
     });
     const json = await res.json();
     revokeResult.textContent = JSON.stringify(json, null, 2);

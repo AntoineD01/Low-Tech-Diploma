@@ -13,6 +13,17 @@
 </head>
 <body>
 
+<script>
+const token = localStorage.getItem("token");
+if (!token) window.location.href = "login.html";
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+if (payload.role !== "holder") {
+    alert("Access denied");
+    window.location.href = "index.html";
+}
+</script>
+
 <!-- Menu de navigation -->
 <nav style="margin-bottom:20px;">
     <a href="index.html" style="margin-right:10px;">Accueil</a>
@@ -27,7 +38,11 @@
 
 <script>
 async function loadDiplomas() {
-    const res = await fetch("http://127.0.0.1:5000/list");
+    const res = await fetch("http://127.0.0.1:5000/list", {
+    headers: {
+        "Authorization": token
+    }
+    });
     const diplomas = await res.json();
     if (!diplomas.length) {
         list.innerHTML = "Aucun diplôme trouvé.";

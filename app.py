@@ -66,6 +66,7 @@ def auth_required(role=None):
 # ISSUE
 # -----------------------------
 @app.route("/issue", methods=["POST"])
+@auth_required("school")
 def issue():
     data = request.json
 
@@ -106,13 +107,30 @@ def issue():
 # GET DIPLOMA
 # -----------------------------
 @app.route("/diploma/<id>", methods=["GET"])
+@auth_required()
 def get_diploma(id):
-    path = os.path.join(DIPLOMAS_DIR, f"{id}.json")
+    filename = f"{id}.json"
+    path = os.path.join(DIPLOMAS_DIR, filename)
+
     if not os.path.exists(path):
         return jsonify({"error": "unknown diploma"}), 404
 
     with open(path) as f:
-        return jsonify(json.load(f))
+        diploma = json.load(f)
+
+    user = request.user
+
+    # School can access everything
+    if user["role"] == "school":
+        return jsonify(diploma)
+
+    # Student only their own
+    if user["role"] == "student":
+        if user["username"] != diploma["student_name"]:
+            return jsonify({"error": "Forbidden"}), 403
+
+    return jsonify(diploma)
+
 
 # -----------------------------
 # VERIFY
@@ -143,6 +161,7 @@ def verify():
 # REVOKE
 # -----------------------------
 @app.route("/revoke", methods=["POST"])
+@auth_required("school")
 def revoke():
     data = request.json
     diploma_id = data.get("id")
@@ -167,19 +186,58 @@ def revoke():
 # LIST
 # -----------------------------
 @app.route("/list", methods=["GET"])
+@auth_required()
 def list_diplomas():
     if not os.path.exists(REGISTRY_FILE):
         return jsonify({"diplomas": []})
 
     with open(REGISTRY_FILE, "r") as f:
-        return jsonify(json.load(f)["diplomas"])
+        registry = json.load(f)
+
+    user = request.user
+
+    # School sees everything
+    if user["role"] == "school":
+        return jsonify(registry["diplomas"])
+
+    # Student sees only their diplomas
+    student_only = [
+        d for d in registry["diplomas"]
+        if d["student_name"] == user["username"]
+    ]
+
+    return jsonify(student_only)
+
 
 # -----------------------------
 # DOWNLOAD
 # -----------------------------
 @app.route("/download/<filename>", methods=["GET"])
+@auth_required()
 def download_diploma(filename):
+    if not os.path.exists(REGISTRY_FILE):
+        return jsonify({"error": "registry missing"}), 500
+
+    with open(REGISTRY_FILE, "r") as f:
+        registry = json.load(f)
+
+    entry = next((d for d in registry["diplomas"] if d["filename"] == filename), None)
+    if not entry:
+        return jsonify({"error": "not found"}), 404
+
+    user = request.user
+
+    # School can download everything
+    if user["role"] == "school":
+        return send_from_directory(DIPLOMAS_DIR, filename)
+
+    # Student can download ONLY their diploma
+    if user["role"] == "student":
+        if user["username"] != entry["student_name"]:
+            return jsonify({"error": "Forbidden"}), 403
+
     return send_from_directory(DIPLOMAS_DIR, filename)
+
 
 # -----------------------------
 # LOGIN
