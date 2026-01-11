@@ -1,4 +1,4 @@
-import json, os, base64, sys, uuid, jwt
+import json, os, base64, sys, uuid, jwt, secrets, string
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, render_template
@@ -178,13 +178,17 @@ def issue():
     data = request.json
     student_name = data.get("student_name")
     student_email = data.get("student_email")
-    student_password = data.get("student_password")
 
     # Check if user already exists
     existing_user = users_collection.find_one({"username": student_name})
     account_created = False
+    student_password = None
     
     if not existing_user:
+        # Generate a secure random password (12 characters: letters, digits, special chars)
+        alphabet = string.ascii_letters + string.digits + "!@#$%&*"
+        student_password = ''.join(secrets.choice(alphabet) for i in range(12))
+        
         # Create new student account
         users_collection.insert_one({
             "username": student_name,
@@ -192,7 +196,7 @@ def issue():
             "role": "student",
             "email": student_email
         })
-        print(f"New student account created: {student_name}")
+        print(f"New student account created: {student_name} with auto-generated password")
         account_created = True
     else:
         print(f"User {student_name} already exists, skipping account creation")
@@ -225,7 +229,7 @@ Félicitations ! Votre diplôme "{data.get('degree_name')}" a été émis avec s
 {'Votre compte a été créé. Voici vos identifiants de connexion :' if account_created else 'Vous pouvez vous connecter avec vos identifiants existants :'}
 
 Nom d\'utilisateur: {student_name}
-{'Mot de passe: ' + student_password if account_created else ''}
+{('Mot de passe: ' + student_password) if account_created and student_password else ''}
 
 Connectez-vous sur: {ALLOWED_ORIGIN}/login.html
 

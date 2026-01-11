@@ -115,14 +115,12 @@ function logout() {
     <label>Email de l'étudiant</label>
     <input type="email" id="student_email" required>
 
-    <label>Mot de passe du compte étudiant</label>
-    <input type="password" id="student_password" required>
-
     <label>Nom du diplôme</label>
     <input type="text" id="degree_name" required>
 
     <button type="submit">Émettre</button>
 </form>
+<p style="color: #666; font-size: 0.9em; margin-top: 10px;">ℹ️ Un mot de passe sera généré automatiquement et envoyé par email</p>
 
 <h3>Résultat :</h3>
 <pre id="issueResult">Aucun.</pre>
@@ -148,7 +146,6 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
     const payload = {
         student_name: student_name.value,
         student_email: student_email.value,
-        student_password: student_password.value,
         degree_name: degree_name.value
     };
     const res = await fetch("/issue", {
