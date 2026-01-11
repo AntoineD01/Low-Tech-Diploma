@@ -1,15 +1,54 @@
 import json, os, base64, sys, uuid, jwt
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
-SECRET = "SUPER_SECRET_KEY_CHANGE_ME"
+SECRET = os.getenv('JWT_SECRET')
+MONGO_URI = os.getenv('MONGO_URI')
+ALLOWED_ORIGIN = os.getenv('ALLOWED_ORIGIN', '*')
+
+# Validate required environment variables
+if not SECRET:
+    print("ERROR: JWT_SECRET environment variable is not set!")
+    sys.exit(1)
+if not MONGO_URI:
+    print("ERROR: MONGO_URI environment variable is not set!")
+    sys.exit(1)
 
 app = Flask(__name__)
-CORS(app)
+# Restrict CORS to specific origin (use '*' only for development)
+CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != '*' else '*')
+
+# -----------------------------
+# MONGODB CONNECTION
+# -----------------------------
+try:
+    client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+    db = client.lowtechdiploma
+    diplomas_collection = db.diplomas
+    users_collection = db.users
+    
+    # Test connection
+    client.admin.command('ping')
+    print("Successfully connected to MongoDB!")
+    
+    # Initialize default users if collection is empty
+    if users_collection.count_documents({}) == 0:
+        print("Initializing default users...")
+        users_collection.insert_many([
+            {"username": "school", "password": generate_password_hash("schoolpass"), "role": "school"},
+            {"username": "alice", "password": generate_password_hash("alicepass"), "role": "student"}
+        ])
+        print("Default users created with hashed passwords!")
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {e}")
+    sys.exit(1)
 
 # -----------------------------
 # BASE PATHS (✅ CORRECT)
@@ -99,7 +138,9 @@ def auth_required(role=None):
                 return jsonify({"error": "Missing token"}), 401
             try:
                 decoded = jwt.decode(token, SECRET, algorithms=["HS256"])
-            except Exception:
+            except jwt.ExpiredSignatureError:
+                return jsonify({"error": "Token has expired"}), 401
+            except jwt.InvalidTokenError:
                 return jsonify({"error": "Invalid token"}), 401
 
             if role and decoded.get("role") != role:
@@ -122,32 +163,16 @@ def issue():
         "id": str(uuid.uuid4()),
         "student_name": data.get("student_name"),
         "degree_name": data.get("degree_name"),
-        "issued_at": datetime.utcnow().isoformat() + "Z"
+        "issued_at": datetime.utcnow().isoformat() + "Z",
+        "revoked": False
     }
 
     payload = json.dumps(diploma, sort_keys=True).encode()
     signature = PRIVATE_KEY.sign(payload)
     diploma["signature"] = base64.b64encode(signature).decode()
 
-    path = os.path.join(DIPLOMAS_DIR, f"{diploma['id']}.json")
-    with open(path, "w") as f:
-        json.dump(diploma, f, indent=2)
-
-    registry = {"diplomas": []}
-    if os.path.exists(REGISTRY_FILE):
-        with open(REGISTRY_FILE, "r") as f:
-            registry = json.load(f)
-
-    registry["diplomas"].append({
-        "filename": f"{diploma['id']}.json",
-        "student_name": diploma["student_name"],
-        "degree_name": diploma["degree_name"],
-        "issued_at": diploma["issued_at"],
-        "revoked": False
-    })
-
-    with open(REGISTRY_FILE, "w") as f:
-        json.dump(registry, f, indent=2)
+    # Save to MongoDB
+    diplomas_collection.insert_one(diploma)
 
     return jsonify({"status": "ok", "diploma_id": diploma["id"]})
 
@@ -157,14 +182,10 @@ def issue():
 @app.route("/diploma/<id>", methods=["GET"])
 @auth_required()
 def get_diploma(id):
-    filename = f"{id}.json"
-    path = os.path.join(DIPLOMAS_DIR, filename)
+    diploma = diplomas_collection.find_one({"id": id}, {"_id": 0})
 
-    if not os.path.exists(path):
+    if not diploma:
         return jsonify({"error": "unknown diploma"}), 404
-
-    with open(path) as f:
-        diploma = json.load(f)
 
     user = request.user
 
@@ -187,22 +208,13 @@ def get_diploma(id):
 def verify():
     diploma = request.json
 
-    # Load the registry
-    found = False
-    revoked = False
-    if os.path.exists(REGISTRY_FILE):
-        with open(REGISTRY_FILE, "r") as f:
-            registry = json.load(f)
-        for d in registry["diplomas"]:
-            if d["filename"] == f"{diploma['id']}.json":
-                found = True
-                revoked = d.get("revoked", False)
-                break
-
-    if not found:
+    # Check if diploma exists in database
+    db_diploma = diplomas_collection.find_one({"id": diploma.get("id")})
+    
+    if not db_diploma:
         return jsonify({"valid": False, "reason": "unknown diploma"})
 
-    if revoked:
+    if db_diploma.get("revoked", False):
         return jsonify({"valid": False, "reason": "revoked diploma"})
 
     # Verify the signature
@@ -227,19 +239,11 @@ def revoke():
     data = request.json
     diploma_id = data.get("id")
 
-    with open(REGISTRY_FILE, "r") as f:
-        registry = json.load(f)
-
-    for d in registry["diplomas"]:
-        if d["filename"] == f"{diploma_id}.json":
-            d["revoked"] = True
-            file_path = os.path.join(DIPLOMAS_DIR, d["filename"])
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            break
-
-    with open(REGISTRY_FILE, "w") as f:
-        json.dump(registry, f, indent=2)
+    # Mark diploma as revoked in MongoDB
+    diplomas_collection.update_one(
+        {"id": diploma_id},
+        {"$set": {"revoked": True}}
+    )
 
     return jsonify({"status": "ok"})
 
@@ -249,20 +253,14 @@ def revoke():
 @app.route("/list", methods=["GET"])
 @auth_required()
 def list_diplomas():
-    if not os.path.exists(REGISTRY_FILE):
-        return jsonify({"diplomas": []})
-
-    with open(REGISTRY_FILE, "r") as f:
-        registry = json.load(f)
-
     user = request.user
 
     if user["role"] == "school":
         # School sees all diplomas
-        diplomas = registry["diplomas"]
+        diplomas = list(diplomas_collection.find({}, {"_id": 0}))
     elif user["role"] == "student":
         # Student sees only their diplomas
-        diplomas = [d for d in registry["diplomas"] if d["student_name"] == user["username"]]
+        diplomas = list(diplomas_collection.find({"student_name": user["username"]}, {"_id": 0}))
     else:
         diplomas = []
 
@@ -271,31 +269,29 @@ def list_diplomas():
 # -----------------------------
 # DOWNLOAD
 # -----------------------------
-@app.route("/download/<filename>", methods=["GET"])
+@app.route("/download/<diploma_id>", methods=["GET"])
 @auth_required()
-def download_diploma(filename):
-    if not os.path.exists(REGISTRY_FILE):
-        return jsonify({"error": "registry missing"}), 500
-
-    with open(REGISTRY_FILE, "r") as f:
-        registry = json.load(f)
-
-    entry = next((d for d in registry["diplomas"] if d["filename"] == filename), None)
-    if not entry:
+def download_diploma(diploma_id):
+    # Remove .json extension if present
+    diploma_id = diploma_id.replace(".json", "")
+    
+    diploma = diplomas_collection.find_one({"id": diploma_id}, {"_id": 0})
+    
+    if not diploma:
         return jsonify({"error": "not found"}), 404
 
     user = request.user
 
     # School can download everything
     if user["role"] == "school":
-        return send_from_directory(DIPLOMAS_DIR, filename)
+        return jsonify(diploma)
 
     # Student can download ONLY their diploma
     if user["role"] == "student":
-        if user["username"] != entry["student_name"]:
+        if user["username"] != diploma["student_name"]:
             return jsonify({"error": "Forbidden"}), 403
 
-    return send_from_directory(DIPLOMAS_DIR, filename)
+    return jsonify(diploma)
 
 
 # -----------------------------
@@ -305,17 +301,20 @@ def download_diploma(filename):
 def login():
     data = request.json
 
-    with open(USERS_FILE, "r") as f:
-        users = json.load(f)["users"]
+    user = users_collection.find_one({"username": data.get("username")})
 
-    for user in users:
-        if user["username"] == data["username"] and user["password"] == data["password"]:
-            token = jwt.encode(
-                {"username": user["username"], "role": user["role"]},
-                SECRET,
-                algorithm="HS256"
-            )
-            return jsonify({"token": token})
+    if user and check_password_hash(user["password"], data.get("password")):
+        # Token expires in 24 hours
+        token = jwt.encode(
+            {
+                "username": user["username"], 
+                "role": user["role"],
+                "exp": datetime.utcnow() + timedelta(hours=24)
+            },
+            SECRET,
+            algorithm="HS256"
+        )
+        return jsonify({"token": token})
 
     return jsonify({"error": "Invalid credentials"}), 401
 

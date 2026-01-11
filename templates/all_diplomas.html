@@ -55,8 +55,8 @@ async function loadDiplomas() {
     diplomas.forEach(d => {
         html += `<li>
             <strong>${d.student_name}</strong> – ${d.degree_name} – ${d.issued_at}
-            <button class="download" onclick="download('${d.filename}')">Télécharger</button>
-            <button class="revoke" onclick="revoke('${d.filename}')">Révoquer</button>
+            <button class="download" onclick="download('${d.id}.json')">Télécharger</button>
+            <button class="revoke" onclick="revoke('${d.id}')">Révoquer</button>
             ${d.revoked ? "<b>(Révoqué)</b>" : ""}
         </li>`;
     });
@@ -65,32 +65,33 @@ async function loadDiplomas() {
 }
 
 async function download(filename) {
-    const res = await fetch(`/download/${filename}`, {
+    const diploma_id = filename.replace(".json", "");
+    const res = await fetch(`/download/${diploma_id}`, {
         headers: { "Authorization": token }
     });
 
     if (!res.ok) {
-        alert("Erreur lors du téléchargement");
+        alert("Error downloading diploma");
         return;
     }
 
-    const blob = await res.blob();
+    const diplomaData = await res.json();
+    const blob = new Blob([JSON.stringify(diplomaData, null, 2)], { type: "application/json" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = `${diploma_id}.json`;
     a.click();
 }
 
-async function revoke(filename) {
-    const id = filename.replace(".json","");
+async function revoke(diploma_id) {
     const res = await fetch("/revoke", {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
             "Authorization": token
         },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: diploma_id })
     });
 
     const result = await res.json();

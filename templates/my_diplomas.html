@@ -50,19 +50,11 @@ async function loadDiplomas() {
         return;
     }
 
-    // Afficher seulement les diplômes de l'étudiant connecté
-    const myDiplomas = diplomas.filter(d => d.student_name === payload.username);
-
-    if (!myDiplomas.length) {
-        list.innerHTML = "Aucun diplôme trouvé.";
-        return;
-    }
-
     let html = "<ul>";
-    myDiplomas.forEach(d => {
+    diplomas.forEach(d => {
         html += `<li>
             ${d.student_name} – ${d.degree_name} – ${d.issued_at}
-            <button onclick="download('${d.filename}')">Télécharger</button>
+            <button onclick="download('${d.id}.json')">Télécharger</button>
             ${d.revoked ? "<b>(Révoqué)</b>" : ""}
         </li>`;
     });
@@ -71,20 +63,22 @@ async function loadDiplomas() {
 }
 
 async function download(filename) {
-    const res = await fetch(`/download/${filename}`, {
+    const diploma_id = filename.replace(".json", "");
+    const res = await fetch(`/download/${diploma_id}`, {
         headers: { "Authorization": token }
     });
 
     if (!res.ok) {
-        alert("Erreur lors du téléchargement");
+        alert("Error downloading diploma");
         return;
     }
 
-    const blob = await res.blob();
+    const diplomaData = await res.json();
+    const blob = new Blob([JSON.stringify(diplomaData, null, 2)], { type: "application/json" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = `${diploma_id}.json`;
     a.click();
 }
 
