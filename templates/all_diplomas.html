@@ -41,7 +41,7 @@ if (payload.role !== "school") {
 
 <script>
 async function loadDiplomas() {
-    const res = await fetch("http://127.0.0.1:5000/list", {
+    const res = await fetch("/list", {
         headers: { "Authorization": token }
     });
     const diplomas = await res.json();
@@ -65,7 +65,7 @@ async function loadDiplomas() {
 }
 
 async function download(filename) {
-    const res = await fetch(`http://127.0.0.1:5000/download/${filename}`, {
+    const res = await fetch(`/download/${filename}`, {
         headers: { "Authorization": token }
     });
 
@@ -84,7 +84,7 @@ async function download(filename) {
 
 async function revoke(filename) {
     const id = filename.replace(".json","");
-    const res = await fetch("http://127.0.0.1:5000/revoke", {
+    const res = await fetch("/revoke", {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",

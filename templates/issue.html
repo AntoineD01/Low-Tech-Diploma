@@ -79,7 +79,7 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
         student_name: student_name.value,
         degree_name: degree_name.value
     };
-    const res = await fetch("http://127.0.0.1:5000/issue", {
+    const res = await fetch("/issue", {
     method: "POST",
     headers: {
         "Content-Type":"application/json",
@@ -94,7 +94,7 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
 document.getElementById("revokeForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const payload = { id: diploma_id.value };
-    const res = await fetch("http://127.0.0.1:5000/revoke", {
+    const res = await fetch("/revoke", {
     method: "POST",
     headers: {
         "Content-Type":"application/json",
