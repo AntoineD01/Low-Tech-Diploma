@@ -1,7 +1,7 @@
 import json, os, base64, sys, uuid, jwt
 from datetime import datetime
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
@@ -58,6 +58,33 @@ with open(PUBLIC_KEY_PATH, "rb") as f:
     PUBLIC_KEY = serialization.load_pem_public_key(f.read())
 
 os.makedirs(DIPLOMAS_DIR, exist_ok=True)
+
+# -----------------------------
+# WEB PAGES ROUTES
+# -----------------------------
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/login-page")
+def login_page():
+    return render_template("login.html")
+
+@app.route("/issue-page")
+def issue_page():
+    return render_template("issue.html")
+
+@app.route("/verify-page")
+def verify_page():
+    return render_template("verify.html")
+
+@app.route("/my-diplomas-page")
+def my_diplomas_page():
+    return render_template("my_diplomas.html")
+
+@app.route("/all-diplomas-page")
+def all_diplomas_page():
+    return render_template("all_diplomas.html")
 
 # -----------------------------
 # AUTH DECORATOR
