@@ -66,23 +66,23 @@ os.makedirs(DIPLOMAS_DIR, exist_ok=True)
 def index():
     return render_template("index.html")
 
-@app.route("/login-page")
+@app.route("/login.html")
 def login_page():
     return render_template("login.html")
 
-@app.route("/issue-page")
+@app.route("/issue.html")
 def issue_page():
     return render_template("issue.html")
 
-@app.route("/verify-page")
+@app.route("/verify.html")
 def verify_page():
     return render_template("verify.html")
 
-@app.route("/my-diplomas-page")
+@app.route("/my_diplomas.html")
 def my_diplomas_page():
     return render_template("my_diplomas.html")
 
-@app.route("/all-diplomas-page")
+@app.route("/all_diplomas.html")
 def all_diplomas_page():
     return render_template("all_diplomas.html")
 
