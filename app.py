@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
+from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
@@ -24,6 +25,15 @@ if not MONGO_URI:
 app = Flask(__name__)
 # Restrict CORS to specific origin (use '*' only for development)
 CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != '*' else '*')
+
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME'))
+mail = Mail(app)
 
 # -----------------------------
 # MONGODB CONNECTION
@@ -166,10 +176,30 @@ def auth_required(role=None):
 @auth_required("school")
 def issue():
     data = request.json
+    student_name = data.get("student_name")
+    student_email = data.get("student_email")
+    student_password = data.get("student_password")
+
+    # Check if user already exists
+    existing_user = users_collection.find_one({"username": student_name})
+    account_created = False
+    
+    if not existing_user:
+        # Create new student account
+        users_collection.insert_one({
+            "username": student_name,
+            "password": generate_password_hash(student_password),
+            "role": "student",
+            "email": student_email
+        })
+        print(f"New student account created: {student_name}")
+        account_created = True
+    else:
+        print(f"User {student_name} already exists, skipping account creation")
 
     diploma = {
         "id": str(uuid.uuid4()),
-        "student_name": data.get("student_name"),
+        "student_name": student_name,
         "degree_name": data.get("degree_name"),
         "issued_at": datetime.utcnow().isoformat() + "Z",
         "revoked": False
@@ -182,7 +212,45 @@ def issue():
     # Save to MongoDB
     diplomas_collection.insert_one(diploma)
 
-    return jsonify({"status": "ok", "diploma_id": diploma["id"]})
+    # Send email to student
+    try:
+        if app.config['MAIL_USERNAME']:  # Only send if mail is configured
+            msg = Message(
+                subject=f"Votre diplôme: {data.get('degree_name')}",
+                recipients=[student_email],
+                body=f"""Bonjour {student_name},
+
+Félicitations ! Votre diplôme "{data.get('degree_name')}" a été émis avec succès.
+
+{'Votre compte a été créé. Voici vos identifiants de connexion :' if account_created else 'Vous pouvez vous connecter avec vos identifiants existants :'}
+
+Nom d\'utilisateur: {student_name}
+{'Mot de passe: ' + student_password if account_created else ''}
+
+Connectez-vous sur: {ALLOWED_ORIGIN}/login.html
+
+Vous pourrez consulter et télécharger votre diplôme dans la section "Mes diplômes".
+
+Cordialement,
+L'équipe Low-Tech Diploma
+"""
+            )
+            mail.send(msg)
+            print(f"Email sent to {student_email}")
+            email_sent = True
+        else:
+            print("Mail not configured, skipping email")
+            email_sent = False
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        email_sent = False
+
+    return jsonify({
+        "status": "ok", 
+        "diploma_id": diploma["id"], 
+        "account_created": account_created,
+        "email_sent": email_sent
+    })
 
 # -----------------------------
 # GET DIPLOMA
