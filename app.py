@@ -25,11 +25,31 @@ PUBLIC_KEY_PATH = os.path.join(KEYS_DIR, "public_key.pem")
 PRIVATE_KEY_PATH = os.path.join(KEYS_DIR, "private_key.pem")
 
 # -----------------------------
-# CHECK KEYS
+# CHECK AND GENERATE KEYS IF NEEDED
 # -----------------------------
+os.makedirs(KEYS_DIR, exist_ok=True)
+
 if not os.path.exists(PRIVATE_KEY_PATH) or not os.path.exists(PUBLIC_KEY_PATH):
-    print("Erreur : clés manquantes. Générez-les avec generate_keys.py.")
-    sys.exit(1)
+    print("Keys missing. Generating automatically...")
+    # Generate private and public keys
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    public_key = private_key.public_key()
+    
+    # Save the private key
+    with open(PRIVATE_KEY_PATH, "wb") as f:
+        f.write(private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        ))
+    
+    # Save the public key
+    with open(PUBLIC_KEY_PATH, "wb") as f:
+        f.write(public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ))
+    print("Keys generated successfully!")
 
 with open(PRIVATE_KEY_PATH, "rb") as f:
     PRIVATE_KEY = serialization.load_pem_private_key(f.read(), password=None)
@@ -139,7 +159,7 @@ def get_diploma(id):
 def verify():
     diploma = request.json
 
-    # Charger le registre
+    # Load the registry
     found = False
     revoked = False
     if os.path.exists(REGISTRY_FILE):
@@ -157,7 +177,7 @@ def verify():
     if revoked:
         return jsonify({"valid": False, "reason": "revoked diploma"})
 
-    # Vérifier la signature
+    # Verify the signature
     signature = base64.b64decode(diploma["signature"])
     unsigned = diploma.copy()
     del unsigned["signature"]
@@ -210,10 +230,10 @@ def list_diplomas():
     user = request.user
 
     if user["role"] == "school":
-        # School voit tous les diplômes
+        # School sees all diplomas
         diplomas = registry["diplomas"]
     elif user["role"] == "student":
-        # Student voit uniquement ses diplômes
+        # Student sees only their diplomas
         diplomas = [d for d in registry["diplomas"] if d["student_name"] == user["username"]]
     else:
         diplomas = []
