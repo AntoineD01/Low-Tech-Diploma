@@ -29,12 +29,19 @@ CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != '*' else '*')
 # MONGODB CONNECTION
 # -----------------------------
 try:
-    client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
+    # Add connection timeout settings
+    client = MongoClient(
+        MONGO_URI, 
+        server_api=ServerApi('1'),
+        serverSelectionTimeoutMS=5000,  # 5 second timeout
+        connectTimeoutMS=5000,
+        socketTimeoutMS=5000
+    )
     db = client.lowtechdiploma
     diplomas_collection = db.diplomas
     users_collection = db.users
     
-    # Test connection
+    # Test connection with timeout
     client.admin.command('ping')
     print("Successfully connected to MongoDB!")
     
@@ -48,6 +55,7 @@ try:
         print("Default users created with hashed passwords!")
 except Exception as e:
     print(f"Failed to connect to MongoDB: {e}")
+    print("Please check your MONGO_URI environment variable and MongoDB Atlas network settings")
     sys.exit(1)
 
 # -----------------------------
