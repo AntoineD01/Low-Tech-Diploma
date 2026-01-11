@@ -4,11 +4,69 @@
     <meta charset="UTF-8">
     <title>Émettre un diplôme</title>
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 30px auto; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        nav a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .auth-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .auth-button:hover {
+            background: #45a049;
+        }
+        .logout-button {
+            background: #e53935;
+        }
+        .logout-button:hover {
+            background: #c62828;
+        }
+        .content {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
         label { display:block; margin-top:10px; }
-        input, button { width:100%; padding:10px; margin-top:5px; }
-        button { background:#4CAF50; color:white; border:none; }
-        pre { background:#eee; padding:10px; white-space:pre-wrap; }
+        input, button { width:100%; padding:10px; margin-top:5px; box-sizing: border-box; }
+        button { background:#4CAF50; color:white; border:none; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #45a049; }
+        .revoke-btn { background:#e53935; }
+        .revoke-btn:hover { background:#c62828; }
+        pre { background:#eee; padding:10px; white-space:pre-wrap; border-radius: 4px; }
         hr { margin:30px 0; }
     </style>
 </head>
@@ -25,16 +83,20 @@ if (payload.role !== "school") {
 }
 </script>
 
-<!-- Menu de navigation -->
-<nav style="margin-bottom:20px;">
-    <a href="index.html" style="margin-right:10px;">Accueil</a>
-    <a href="issue.html" style="margin-right:10px;">Émettre un diplôme</a>
-    <a href="my_diplomas.html" style="margin-right:10px;">Mes diplômes</a>
-    <a href="verify.html">Vérifier un diplôme</a>
-    <hr>
-</nav>
+<header>
+    <h1>Plateforme d'attestation de diplômes</h1>
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <nav id="mainNav">
+            <a href="index.html">Accueil</a>
+            <a href="verify.html">Vérifier</a>
+            <a href="issue.html">Émettre</a>
+            <a href="all_diplomas.html">Tous les diplômes</a>
+        </nav>
+        <button class="auth-button logout-button" onclick="logout()">Déconnexion</button>
+    </div>
+</header>
 
-<button onclick="logout()">Logout</button>
+<div class="content">
 
 <script>
 function logout() {
@@ -67,10 +129,12 @@ function logout() {
     <label>ID du diplôme à révoquer</label>
     <input type="text" id="diploma_id" required>
 
-    <button type="submit" style="background:#e53935;">Révoquer</button>
+    <button type="submit" class="revoke-btn">Révoquer</button>
 </form>
 
 <pre id="revokeResult">Aucun.</pre>
+
+</div>
 
 <script>
 document.getElementById("issueForm").addEventListener("submit", async (e) => {

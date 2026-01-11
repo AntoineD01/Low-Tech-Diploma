@@ -4,26 +4,145 @@
     <meta charset="UTF-8">
     <title>Plateforme Diplômes</title>
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 50px auto; }
-        a {
-            display: block;
-            padding: 15px;
-            margin: 15px 0;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        nav a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .auth-button {
             background: #4CAF50;
             color: white;
-            text-align: center;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
             text-decoration: none;
+            display: inline-block;
+        }
+        .auth-button:hover {
+            background: #45a049;
+        }
+        .logout-button {
+            background: #e53935;
+        }
+        .logout-button:hover {
+            background: #c62828;
+        }
+        .content {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
 
-<h2>Plateforme d'attestation de diplômes</h2>
+<header>
+    <h1>Plateforme d'attestation de diplômes</h1>
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <nav id="mainNav">
+            <a href="index.html">Accueil</a>
+            <a href="verify.html">Vérifier</a>
+        </nav>
+        <div id="authSection"></div>
+    </div>
+</header>
 
-<nav>
-  <a href="login.html">Login</a>
-  <a href="verify.html">Vérifier un diplôme</a>
-</nav>
+<div class="content">
+    <div class="card">
+        <h2>Bienvenue</h2>
+        <p>Cette plateforme vous permet de gérer et vérifier des diplômes de manière sécurisée.</p>
+        <p><strong>Fonctionnalités :</strong></p>
+        <ul>
+            <li>Vérification de diplômes</li>
+            <li>Consultation de vos diplômes (étudiants)</li>
+            <li>Émission et gestion de diplômes (écoles)</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+function updateUI() {
+    const token = localStorage.getItem("token");
+    const mainNav = document.getElementById("mainNav");
+    const authSection = document.getElementById("authSection");
+    
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            
+            // Update navigation based on role
+            let navLinks = '<a href="index.html">Accueil</a><a href="verify.html">Vérifier</a>';
+            
+            if (payload.role === "school") {
+                navLinks += '<a href="issue.html">Émettre</a><a href="all_diplomas.html">Tous les diplômes</a>';
+            } else if (payload.role === "student") {
+                navLinks += '<a href="my_diplomas.html">Mes diplômes</a>';
+            }
+            
+            mainNav.innerHTML = navLinks;
+            
+            // Add logout button
+            authSection.innerHTML = '<button class="auth-button logout-button" onclick="logout()">Déconnexion</button>';
+        } catch (e) {
+            // Invalid token
+            localStorage.removeItem("token");
+            showLogin();
+        }
+    } else {
+        showLogin();
+    }
+}
+
+function showLogin() {
+    const mainNav = document.getElementById("mainNav");
+    const authSection = document.getElementById("authSection");
+    
+    mainNav.innerHTML = '<a href="index.html">Accueil</a><a href="verify.html">Vérifier</a>';
+    authSection.innerHTML = '<a href="login.html" class="auth-button">Connexion</a>';
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
+}
+
+updateUI();
+</script>
 
 </body>
 </html>
