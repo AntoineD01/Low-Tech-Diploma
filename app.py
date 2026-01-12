@@ -14,7 +14,6 @@ from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
-import pandas as pd
 
 SECRET = os.getenv('JWT_SECRET')
 MONGO_URI = os.getenv('MONGO_URI')
@@ -380,6 +379,12 @@ L'équipe Low-Tech Diploma
 @app.route("/bulk_issue", methods=["POST"])
 @auth_required("school")
 def bulk_issue():
+    # Lazy import pandas to avoid startup issues
+    try:
+        import pandas as pd
+    except ImportError:
+        return jsonify({"error": "Bulk import feature is not available. pandas library is not installed."}), 503
+    
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     
