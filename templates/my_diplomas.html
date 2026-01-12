@@ -137,13 +137,14 @@ async function download(filename) {
         return;
     }
 
-    const diplomaData = await res.json();
-    const blob = new Blob([JSON.stringify(diplomaData, null, 2)], { type: "application/json" });
+    // Get the blob (ZIP file) from the response
+    const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${diploma_id}.json`;
+    a.download = `diplome_${diploma_id}.zip`;
     a.click();
+    window.URL.revokeObjectURL(url);
 }
 
 function logout() {
