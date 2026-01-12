@@ -14,6 +14,7 @@ from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
+import pandas as pd
 
 SECRET = os.getenv('JWT_SECRET')
 MONGO_URI = os.getenv('MONGO_URI')
@@ -372,6 +373,162 @@ L'équipe Low-Tech Diploma
         "account_created": account_created,
         "email_sent": email_sent
     })
+
+# -----------------------------
+# BULK ISSUE
+# -----------------------------
+@app.route("/bulk_issue", methods=["POST"])
+@auth_required("school")
+def bulk_issue():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    # Check file extension
+    if not (file.filename.endswith('.csv') or file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        return jsonify({"error": "Only CSV and Excel files are supported"}), 400
+    
+    try:
+        # Read file based on extension
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        else:
+            df = pd.read_excel(file)
+        
+        # Validate required columns
+        required_columns = ['student_name', 'student_email', 'degree_name']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            return jsonify({
+                "error": f"Missing required columns: {', '.join(missing_columns)}",
+                "hint": "Required columns: student_name, student_email, degree_name"
+            }), 400
+        
+        results = {
+            "total": 0,
+            "success": 0,
+            "failed": 0,
+            "details": []
+        }
+        
+        # Process each row
+        for index, row in df.iterrows():
+            try:
+                student_name = str(row['student_name']).strip()
+                student_email = str(row['student_email']).strip()
+                degree_name = str(row['degree_name']).strip()
+                
+                # Skip empty rows
+                if not student_name or student_name == 'nan':
+                    continue
+                
+                results["total"] += 1
+                
+                # Check if user already exists
+                existing_user = users_collection.find_one({"username": student_name})
+                account_created = False
+                student_password = None
+                
+                if not existing_user:
+                    # Generate password
+                    alphabet = string.ascii_letters + string.digits + "!@#$%&*"
+                    student_password = ''.join(secrets.choice(alphabet) for i in range(12))
+                    
+                    # Create student account
+                    users_collection.insert_one({
+                        "username": student_name,
+                        "password": generate_password_hash(student_password),
+                        "role": "student",
+                        "email": student_email
+                    })
+                    account_created = True
+                
+                # Create diploma
+                diploma = {
+                    "id": str(uuid.uuid4()),
+                    "student_name": student_name,
+                    "degree_name": degree_name,
+                    "issued_at": datetime.utcnow().isoformat() + "Z",
+                    "revoked": False
+                }
+                
+                payload = json.dumps(diploma, sort_keys=True).encode()
+                signature = PRIVATE_KEY.sign(payload)
+                diploma["signature"] = base64.b64encode(signature).decode()
+                
+                # Save to MongoDB
+                diplomas_collection.insert_one(diploma)
+                
+                # Generate PDF
+                pdf_path = None
+                try:
+                    pdf_path = generate_diploma_pdf(diploma)
+                except Exception as e:
+                    print(f"Failed to generate PDF for {student_name}: {e}")
+                
+                # Send email
+                email_sent = False
+                try:
+                    if app.config['MAIL_USERNAME']:
+                        msg = Message(
+                            subject=f"Votre diplome: {degree_name}",
+                            recipients=[student_email],
+                            body=f"""Bonjour {student_name},
+
+Felicitations ! Votre diplome "{degree_name}" a ete emis avec succes.
+
+{'Votre compte a ete cree. Voici vos identifiants de connexion :' if account_created else 'Vous pouvez vous connecter avec vos identifiants existants :'}
+
+Nom d'utilisateur: {student_name}
+{('Mot de passe: ' + student_password) if account_created and student_password else ''}
+
+Connectez-vous sur: {ALLOWED_ORIGIN}/login.html
+
+Veuillez trouver votre diplome en piece jointe au format PDF.
+
+Cordialement,
+L'equipe Low-Tech Diploma
+"""
+                        )
+                        
+                        if pdf_path and os.path.exists(pdf_path):
+                            with open(pdf_path, 'rb') as fp:
+                                msg.attach(
+                                    f"diplome_{student_name}.pdf",
+                                    "application/pdf",
+                                    fp.read()
+                                )
+                        
+                        mail.send(msg)
+                        email_sent = True
+                except Exception as e:
+                    print(f"Failed to send email to {student_email}: {e}")
+                
+                results["success"] += 1
+                results["details"].append({
+                    "student": student_name,
+                    "status": "success",
+                    "diploma_id": diploma["id"],
+                    "email_sent": email_sent
+                })
+                
+            except Exception as e:
+                results["failed"] += 1
+                results["details"].append({
+                    "student": str(row.get('student_name', f'Row {index + 1}')),
+                    "status": "failed",
+                    "error": str(e)
+                })
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to process file: {str(e)}"}), 500
 
 # -----------------------------
 # GET DIPLOMA

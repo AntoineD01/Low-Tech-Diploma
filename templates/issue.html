@@ -60,6 +60,35 @@
             margin: 30px auto;
             padding: 0 20px;
         }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            color: #2c3e50;
+        }
+        .tab.active {
+            color: #4CAF50;
+            border-bottom-color: #4CAF50;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
         label { display:block; margin-top:10px; }
         input, button { width:100%; padding:10px; margin-top:5px; box-sizing: border-box; }
         button { background:#4CAF50; color:white; border:none; cursor: pointer; border-radius: 4px; }
@@ -68,6 +97,95 @@
         .revoke-btn:hover { background:#c62828; }
         pre { background:#eee; padding:10px; white-space:pre-wrap; border-radius: 4px; }
         hr { margin:30px 0; }
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .file-input {
+            margin: 20px 0;
+        }
+        .file-input input[type="file"] {
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .results {
+            margin-top: 20px;
+            display: none;
+        }
+        .results.show {
+            display: block;
+        }
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat {
+            flex: 1;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .stat.total { background: #e3f2fd; color: #1976D2; }
+        .stat.success { background: #e8f5e9; color: #388E3C; }
+        .stat.failed { background: #ffebee; color: #D32F2F; }
+        .stat .number { font-size: 24px; font-weight: bold; }
+        .stat .label { font-size: 12px; margin-top: 5px; }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .loading.show { display: block; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            background: #ffebee;
+            color: #D32F2F;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .error-message.show { display: block; }
+        .details-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .detail-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .detail-item.success { border-left: 3px solid #388E3C; }
+        .detail-item.failed { border-left: 3px solid #D32F2F; }
     </style>
 </head>
 <body>
@@ -98,49 +216,110 @@ if (payload.role !== "school") {
 
 <div class="content">
 
+<h2>Émettre un diplôme</h2>
+
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('single')">Diplôme unique</button>
+    <button class="tab" onclick="switchTab('bulk')">Import en masse</button>
+    <button class="tab" onclick="switchTab('revoke')">Révoquer</button>
+</div>
+
+<!-- Single Diploma Tab -->
+<div id="single-tab" class="tab-content active">
+    <form id="issueForm">
+        <label>Nom de l'étudiant (username)</label>
+        <input type="text" id="student_name" required>
+
+        <label>Email de l'étudiant</label>
+        <input type="email" id="student_email" required>
+
+        <label>Nom du diplôme</label>
+        <input type="text" id="degree_name" required>
+
+        <button type="submit">Émettre</button>
+    </form>
+    <p style="color: #666; font-size: 0.9em; margin-top: 10px;">ℹ️ Un mot de passe sera généré automatiquement et envoyé par email</p>
+
+    <h3>Résultat :</h3>
+    <pre id="issueResult">Aucun.</pre>
+</div>
+
+<!-- Bulk Import Tab -->
+<div id="bulk-tab" class="tab-content">
+    <div class="info-box">
+        <strong>📋 Format du fichier</strong>
+        <p style="margin: 10px 0;">Votre fichier CSV ou Excel doit contenir les colonnes suivantes :</p>
+        <ul style="margin: 5px 0 5px 20px;">
+            <li><code>student_name</code> - Nom de l'étudiant</li>
+            <li><code>student_email</code> - Email de l'étudiant</li>
+            <li><code>degree_name</code> - Nom du diplôme</li>
+        </ul>
+        <p style="margin-top: 10px; font-size: 0.9em;">Formats acceptés : .csv, .xlsx, .xls</p>
+    </div>
+
+    <form id="bulkForm">
+        <div class="file-input">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" required>
+        </div>
+        <button type="submit">Importer les diplômes</button>
+    </form>
+    <div class="error-message" id="bulkError"></div>
+
+    <div class="loading" id="bulkLoading">
+        <div class="spinner"></div>
+        <p>Traitement en cours...</p>
+    </div>
+
+    <div class="results" id="bulkResults">
+        <h3>Résultats de l'import</h3>
+        <div class="stats">
+            <div class="stat total">
+                <div class="number" id="totalCount">0</div>
+                <div class="label">Total</div>
+            </div>
+            <div class="stat success">
+                <div class="number" id="successCount">0</div>
+                <div class="label">Réussis</div>
+            </div>
+            <div class="stat failed">
+                <div class="number" id="failedCount">0</div>
+                <div class="label">Échoués</div>
+            </div>
+        </div>
+        <div class="details-list" id="detailsList"></div>
+    </div>
+</div>
+
+<!-- Revoke Tab -->
+<div id="revoke-tab" class="tab-content">
+    <form id="revokeForm">
+        <label>ID du diplôme à révoquer</label>
+        <input type="text" id="diploma_id" required>
+
+        <button type="submit" class="revoke-btn">Révoquer</button>
+    </form>
+
+    <h3>Résultat :</h3>
+    <pre id="revokeResult">Aucun.</pre>
+</div>
+
+</div>
+
 <script>
 function logout() {
   localStorage.removeItem("token");
   window.location.href = "index.html";
 }
-</script>
 
-
-<h2>Émettre un diplôme</h2>
-
-<form id="issueForm">
-    <label>Nom de l'étudiant (username)</label>
-    <input type="text" id="student_name" required>
-
-    <label>Email de l'étudiant</label>
-    <input type="email" id="student_email" required>
-
-    <label>Nom du diplôme</label>
-    <input type="text" id="degree_name" required>
-
-    <button type="submit">Émettre</button>
-</form>
-<p style="color: #666; font-size: 0.9em; margin-top: 10px;">ℹ️ Un mot de passe sera généré automatiquement et envoyé par email</p>
-
-<h3>Résultat :</h3>
-<pre id="issueResult">Aucun.</pre>
-
-<hr>
-
-<h2>Révoquer un diplôme</h2>
-
-<form id="revokeForm">
-    <label>ID du diplôme à révoquer</label>
-    <input type="text" id="diploma_id" required>
-
-    <button type="submit" class="revoke-btn">Révoquer</button>
-</form>
-
-<pre id="revokeResult">Aucun.</pre>
-
-</div>
-
-<script>
+function switchTab(tab) {
+    // Remove active class from all tabs and contents
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Add active class to selected tab
+    event.target.classList.add('active');
+    document.getElementById(tab + '-tab').classList.add('active');
+}
 document.getElementById("issueForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const payload = {
@@ -159,6 +338,94 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
     const json = await res.json();
     issueResult.textContent = JSON.stringify(json, null, 2);
 });
+
+document.getElementById("bulkForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showBulkError('Veuillez sélectionner un fichier');
+        return;
+    }
+    
+    // Hide previous results and errors
+    document.getElementById('bulkResults').classList.remove('show');
+    document.getElementById('bulkError').classList.remove('show');
+    
+    // Show loading
+    document.getElementById('bulkLoading').classList.add('show');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/bulk_issue', {
+            method: 'POST',
+            headers: {
+                'Authorization': token
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        // Hide loading
+        document.getElementById('bulkLoading').classList.remove('show');
+        
+        if (!response.ok) {
+            showBulkError(result.error + (result.hint ? '\\n\\n' + result.hint : ''));
+            return;
+        }
+        
+        // Show results
+        displayBulkResults(result);
+        
+        // Reset form
+        fileInput.value = '';
+        
+    } catch (error) {
+        document.getElementById('bulkLoading').classList.remove('show');
+        showBulkError('Erreur lors de l\\'import: ' + error.message);
+    }
+});
+
+function showBulkError(message) {
+    const errorDiv = document.getElementById('bulkError');
+    errorDiv.textContent = message;
+    errorDiv.classList.add('show');
+}
+
+function displayBulkResults(result) {
+    document.getElementById('totalCount').textContent = result.total;
+    document.getElementById('successCount').textContent = result.success;
+    document.getElementById('failedCount').textContent = result.failed;
+    
+    const detailsList = document.getElementById('detailsList');
+    detailsList.innerHTML = '';
+    
+    result.details.forEach(detail => {
+        const item = document.createElement('div');
+        item.className = 'detail-item ' + detail.status;
+        
+        if (detail.status === 'success') {
+            item.innerHTML = `
+                <strong>${detail.student}</strong> - ✓ Réussi
+                <br><small>ID: ${detail.diploma_id} | Email: ${detail.email_sent ? '✓' : '✗'}</small>
+            `;
+        } else {
+            item.innerHTML = `
+                <strong>${detail.student}</strong> - ✗ Échoué
+                <br><small>${detail.error}</small>
+            `;
+        }
+        
+        detailsList.appendChild(item);
+    });
+    
+    document.getElementById('bulkResults').classList.add('show');
+}
 
 document.getElementById("revokeForm").addEventListener("submit", async (e) => {
     e.preventDefault();
