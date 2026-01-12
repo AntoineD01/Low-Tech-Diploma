@@ -55,6 +55,7 @@ try:
     db = client.lowtechdiploma
     diplomas_collection = db.diplomas
     users_collection = db.users
+    keys_collection = db.keys
     
     # Test connection with timeout
     client.admin.command('ping')
@@ -78,47 +79,58 @@ except Exception as e:
 # -----------------------------
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-KEYS_DIR = os.path.join(script_dir, "keys")
 DIPLOMAS_DIR = os.path.join(script_dir, "diplomas")
 PDFS_DIR = os.path.join(script_dir, "pdfs")
-REGISTRY_FILE = os.path.join(script_dir, "registry.json")
-USERS_FILE = os.path.join(script_dir, "users.json")
-
-PUBLIC_KEY_PATH = os.path.join(KEYS_DIR, "public_key.pem")
-PRIVATE_KEY_PATH = os.path.join(KEYS_DIR, "private_key.pem")
 
 # -----------------------------
-# CHECK AND GENERATE KEYS IF NEEDED
+# LOAD OR GENERATE KEYS FROM MONGODB
 # -----------------------------
-os.makedirs(KEYS_DIR, exist_ok=True)
-
-if not os.path.exists(PRIVATE_KEY_PATH) or not os.path.exists(PUBLIC_KEY_PATH):
-    print("Keys missing. Generating automatically...")
-    # Generate private and public keys
-    private_key = ed25519.Ed25519PrivateKey.generate()
-    public_key = private_key.public_key()
+def load_or_generate_keys():
+    """Load keys from MongoDB or generate new ones if they don't exist"""
+    # Try to load existing keys from MongoDB
+    key_doc = keys_collection.find_one({"key_id": "main"})
     
-    # Save the private key
-    with open(PRIVATE_KEY_PATH, "wb") as f:
-        f.write(private_key.private_bytes(
+    if key_doc:
+        print("Loading existing keys from MongoDB...")
+        # Load keys from database
+        private_key_pem = key_doc["private_key"].encode()
+        public_key_pem = key_doc["public_key"].encode()
+        
+        private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+        public_key = serialization.load_pem_public_key(public_key_pem)
+        
+        print("Keys loaded successfully from MongoDB!")
+        return private_key, public_key
+    else:
+        print("No keys found in MongoDB. Generating new keys...")
+        # Generate new keys
+        private_key = ed25519.Ed25519PrivateKey.generate()
+        public_key = private_key.public_key()
+        
+        # Serialize keys to PEM format
+        private_key_pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()
-        ))
-    
-    # Save the public key
-    with open(PUBLIC_KEY_PATH, "wb") as f:
-        f.write(public_key.public_bytes(
+        ).decode()
+        
+        public_key_pem = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ))
-    print("Keys generated successfully!")
+        ).decode()
+        
+        # Store keys in MongoDB
+        keys_collection.insert_one({
+            "key_id": "main",
+            "private_key": private_key_pem,
+            "public_key": public_key_pem,
+            "created_at": datetime.utcnow().isoformat() + "Z"
+        })
+        
+        print("Keys generated and stored in MongoDB successfully!")
+        return private_key, public_key
 
-with open(PRIVATE_KEY_PATH, "rb") as f:
-    PRIVATE_KEY = serialization.load_pem_private_key(f.read(), password=None)
-
-with open(PUBLIC_KEY_PATH, "rb") as f:
-    PUBLIC_KEY = serialization.load_pem_public_key(f.read())
+PRIVATE_KEY, PUBLIC_KEY = load_or_generate_keys()
 
 os.makedirs(DIPLOMAS_DIR, exist_ok=True)
 os.makedirs(PDFS_DIR, exist_ok=True)
