@@ -1,7 +1,7 @@
-import json, os, base64, sys, uuid, jwt, secrets, string
+import json, os, base64, sys, uuid, jwt, secrets, string, zipfile, io
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, send_file
 from flask_cors import CORS
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,6 +9,11 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle
 
 SECRET = os.getenv('JWT_SECRET')
 MONGO_URI = os.getenv('MONGO_URI')
@@ -75,6 +80,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 KEYS_DIR = os.path.join(script_dir, "keys")
 DIPLOMAS_DIR = os.path.join(script_dir, "diplomas")
+PDFS_DIR = os.path.join(script_dir, "pdfs")
 REGISTRY_FILE = os.path.join(script_dir, "registry.json")
 USERS_FILE = os.path.join(script_dir, "users.json")
 
@@ -115,6 +121,7 @@ with open(PUBLIC_KEY_PATH, "rb") as f:
     PUBLIC_KEY = serialization.load_pem_public_key(f.read())
 
 os.makedirs(DIPLOMAS_DIR, exist_ok=True)
+os.makedirs(PDFS_DIR, exist_ok=True)
 
 # -----------------------------
 # WEB PAGES ROUTES
@@ -143,6 +150,84 @@ def my_diplomas_page():
 @app.route("/all_diplomas.html")
 def all_diplomas_page():
     return render_template("all_diplomas.html")
+
+# -----------------------------
+# GENERATE PDF DIPLOMA
+# -----------------------------
+def generate_diploma_pdf(diploma):
+    """Generate a professional PDF diploma."""
+    pdf_filename = f"{diploma['id']}.pdf"
+    pdf_path = os.path.join(PDFS_DIR, pdf_filename)
+    
+    # Create PDF
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+    width, height = A4
+    
+    # Draw border
+    c.setStrokeColor(colors.HexColor('#1a472a'))
+    c.setLineWidth(3)
+    c.rect(2*cm, 2*cm, width - 4*cm, height - 4*cm)
+    
+    # Inner decorative border
+    c.setLineWidth(1)
+    c.rect(2.3*cm, 2.3*cm, width - 4.6*cm, height - 4.6*cm)
+    
+    # Title
+    c.setFont("Helvetica-Bold", 32)
+    c.setFillColor(colors.HexColor('#1a472a'))
+    c.drawCentredString(width / 2, height - 5*cm, "DIPLÔME")
+    
+    # Subtitle
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width / 2, height - 6.5*cm, "Ce document certifie que")
+    
+    # Student name
+    c.setFont("Helvetica-Bold", 24)
+    c.setFillColor(colors.HexColor('#2e7d32'))
+    c.drawCentredString(width / 2, height - 9*cm, diploma['student_name'])
+    
+    # Achievement text
+    c.setFont("Helvetica", 14)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width / 2, height - 11*cm, "a obtenu avec succès le diplôme de")
+    
+    # Degree name
+    c.setFont("Helvetica-Bold", 18)
+    c.setFillColor(colors.HexColor('#1a472a'))
+    c.drawCentredString(width / 2, height - 13*cm, diploma['degree_name'])
+    
+    # Date
+    issue_date = datetime.fromisoformat(diploma['issued_at'].replace('Z', '+00:00'))
+    date_str = issue_date.strftime("%d %B %Y")
+    c.setFont("Helvetica", 12)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width / 2, height - 16*cm, f"Délivré le {date_str}")
+    
+    # Diploma ID (small text at bottom)
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.grey)
+    c.drawCentredString(width / 2, 3*cm, f"ID: {diploma['id']}")
+    
+    # Signature section
+    c.setFont("Helvetica-Italic", 10)
+    c.setFillColor(colors.black)
+    c.drawString(width - 10*cm, 5*cm, "Signature de l'établissement")
+    c.line(width - 10*cm, 4.7*cm, width - 3*cm, 4.7*cm)
+    
+    # Low-Tech Diploma watermark
+    c.setFont("Helvetica-BoldOblique", 40)
+    c.setFillColor(colors.Color(0.9, 0.9, 0.9, alpha=0.3))
+    c.saveState()
+    c.translate(width / 2, height / 2)
+    c.rotate(45)
+    c.drawCentredString(0, 0, "LOW-TECH DIPLOMA")
+    c.restoreState()
+    
+    # Save PDF
+    c.save()
+    
+    return pdf_path
 
 # -----------------------------
 # AUTH DECORATOR
@@ -216,6 +301,13 @@ def issue():
     # Save to MongoDB
     diplomas_collection.insert_one(diploma)
 
+    # Generate PDF diploma
+    try:
+        pdf_path = generate_diploma_pdf(diploma)
+        print(f"PDF diploma generated: {pdf_path}")
+    except Exception as e:
+        print(f"Failed to generate PDF: {e}")
+
     # Send email to student
     try:
         if app.config['MAIL_USERNAME']:  # Only send if mail is configured
@@ -235,10 +327,22 @@ Connectez-vous sur: {ALLOWED_ORIGIN}/login.html
 
 Vous pourrez consulter et télécharger votre diplôme dans la section "Mes diplômes".
 
+Veuillez trouver votre diplôme en pièce jointe au format PDF.
+
 Cordialement,
 L'équipe Low-Tech Diploma
 """
             )
+            
+            # Attach PDF diploma to email
+            if os.path.exists(pdf_path):
+                with open(pdf_path, 'rb') as fp:
+                    msg.attach(
+                        f"diplome_{student_name}.pdf",
+                        "application/pdf",
+                        fp.read()
+                    )
+            
             mail.send(msg)
             print(f"Email sent to {student_email}")
             email_sent = True
@@ -364,14 +468,73 @@ def download_diploma(diploma_id):
 
     # School can download everything
     if user["role"] == "school":
-        return jsonify(diploma)
-
+        pass
     # Student can download ONLY their diploma
-    if user["role"] == "student":
+    elif user["role"] == "student":
+        if user["username"] != diploma["student_name"]:
+            return jsonify({"error": "Forbidden"}), 403
+    
+    # Create a zip file containing JSON and PDF
+    memory_file = io.BytesIO()
+    
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Add JSON file
+        json_data = json.dumps(diploma, indent=2)
+        zf.writestr(f"{diploma_id}.json", json_data)
+        
+        # Add PDF file
+        pdf_path = os.path.join(PDFS_DIR, f"{diploma_id}.pdf")
+        if not os.path.exists(pdf_path):
+            # Generate PDF if it doesn't exist
+            try:
+                pdf_path = generate_diploma_pdf(diploma)
+            except Exception as e:
+                return jsonify({"error": f"Failed to generate PDF: {str(e)}"}), 500
+        
+        with open(pdf_path, 'rb') as pdf_file:
+            zf.writestr(f"diplome_{diploma['student_name']}.pdf", pdf_file.read())
+    
+    memory_file.seek(0)
+    
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f"diplome_{diploma['student_name']}_{diploma_id}.zip"
+    )
+
+
+# -----------------------------
+# DOWNLOAD PDF
+# -----------------------------
+@app.route("/download_pdf/<diploma_id>", methods=["GET"])
+@auth_required()
+def download_pdf(diploma_id):
+    diploma = diplomas_collection.find_one({"id": diploma_id}, {"_id": 0})
+    
+    if not diploma:
+        return jsonify({"error": "not found"}), 404
+
+    user = request.user
+
+    # School can download everything
+    if user["role"] == "school":
+        pass
+    # Student can download ONLY their diploma
+    elif user["role"] == "student":
         if user["username"] != diploma["student_name"]:
             return jsonify({"error": "Forbidden"}), 403
 
-    return jsonify(diploma)
+    pdf_path = os.path.join(PDFS_DIR, f"{diploma_id}.pdf")
+    
+    if not os.path.exists(pdf_path):
+        # Generate PDF if it doesn't exist
+        try:
+            pdf_path = generate_diploma_pdf(diploma)
+        except Exception as e:
+            return jsonify({"error": f"Failed to generate PDF: {str(e)}"}), 500
+    
+    return send_file(pdf_path, as_attachment=True, download_name=f"diplome_{diploma['student_name']}_{diploma_id}.pdf")
 
 
 # -----------------------------
