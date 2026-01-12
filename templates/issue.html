@@ -219,9 +219,9 @@ if (payload.role !== "school") {
 <h2>Émettre un diplôme</h2>
 
 <div class="tabs">
-    <button class="tab active" onclick="switchTab('single')">Diplôme unique</button>
-    <button class="tab" onclick="switchTab('bulk')">Import en masse</button>
-    <button class="tab" onclick="switchTab('revoke')">Révoquer</button>
+    <button class="tab active" onclick="switchTab(event, 'single')">Diplôme unique</button>
+    <button class="tab" onclick="switchTab(event, 'bulk')">Import en masse</button>
+    <button class="tab" onclick="switchTab(event, 'revoke')">Révoquer</button>
 </div>
 
 <!-- Single Diploma Tab -->
@@ -311,7 +311,7 @@ function logout() {
   window.location.href = "index.html";
 }
 
-function switchTab(tab) {
+function switchTab(event, tab) {
     // Remove active class from all tabs and contents
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
