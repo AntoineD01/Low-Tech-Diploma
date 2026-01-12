@@ -210,9 +210,9 @@ def generate_diploma_pdf(diploma):
     c.drawCentredString(width / 2, 3*cm, f"ID: {diploma['id']}")
     
     # Signature section
-    c.setFont("Helvetica-Italic", 10)
+    c.setFont("Helvetica-Oblique", 10)
     c.setFillColor(colors.black)
-    c.drawString(width - 10*cm, 5*cm, "Signature de l'établissement")
+    c.drawString(width - 10*cm, 5*cm, "Signature de l'etablissement")
     c.line(width - 10*cm, 4.7*cm, width - 3*cm, 4.7*cm)
     
     # Low-Tech Diploma watermark
@@ -302,6 +302,7 @@ def issue():
     diplomas_collection.insert_one(diploma)
 
     # Generate PDF diploma
+    pdf_path = None
     try:
         pdf_path = generate_diploma_pdf(diploma)
         print(f"PDF diploma generated: {pdf_path}")
@@ -335,7 +336,7 @@ L'équipe Low-Tech Diploma
             )
             
             # Attach PDF diploma to email
-            if os.path.exists(pdf_path):
+            if pdf_path and os.path.exists(pdf_path):
                 with open(pdf_path, 'rb') as fp:
                     msg.attach(
                         f"diplome_{student_name}.pdf",
