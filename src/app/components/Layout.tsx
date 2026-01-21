@@ -41,14 +41,24 @@ export const Layout = ({ children }: LayoutProps) => {
                 Vérifier
               </Link>
               {isAuthenticated && user?.role === 'school' && (
-                <Link
-                  to="/issue"
-                  className={`hover:text-gray-300 transition-colors ${
-                    isActive('/issue') ? 'border-b-2 border-white pb-1' : ''
-                  }`}
-                >
-                  Émettre
-                </Link>
+                <>
+                  <Link
+                    to="/issue"
+                    className={`hover:text-gray-300 transition-colors ${
+                      isActive('/issue') ? 'border-b-2 border-white pb-1' : ''
+                    }`}
+                  >
+                    Émettre
+                  </Link>
+                  <Link
+                    to="/diplomas"
+                    className={`hover:text-gray-300 transition-colors ${
+                      isActive('/diplomas') ? 'border-b-2 border-white pb-1' : ''
+                    }`}
+                  >
+                    Diplômes
+                  </Link>
+                </>
               )}
               {isAuthenticated && user?.role === 'student' && (
                 <Link

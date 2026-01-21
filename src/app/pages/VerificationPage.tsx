@@ -19,6 +19,11 @@ export const VerificationPage = () => {
     }
   };
 
+  const handleReset = () => {
+    setDiplomaFile(null);
+    setVerificationResult(null);
+  };
+
   const handleVerify = async () => {
     if (!diplomaFile) return;
 
@@ -100,26 +105,34 @@ export const VerificationPage = () => {
             <div className={`px-8 py-6 ${
               verificationResult.valid ? 'bg-green-50' : 'bg-red-50'
             }`}>
-              <div className="flex items-center gap-3">
-                {verificationResult.valid ? (
-                  <>
-                    <CheckCircle className="h-10 w-10 text-green-600" />
-                    <div>
-                      <h2 className="text-2xl text-green-900">Diplôme Valide ✓</h2>
-                      <p className="text-green-700">Ce diplôme est authentique et vérifié</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-10 w-10 text-red-600" />
-                    <div>
-                      <h2 className="text-2xl text-red-900">Diplôme Invalide ✗</h2>
-                      <p className="text-red-700">
-                        {verificationResult.error || 'Ce diplôme n\'a pas pu être vérifié'}
-                      </p>
-                    </div>
-                  </>
-                )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {verificationResult.valid ? (
+                    <>
+                      <CheckCircle className="h-10 w-10 text-green-600" />
+                      <div>
+                        <h2 className="text-2xl text-green-900">Diplôme Valide ✓</h2>
+                        <p className="text-green-700">Ce diplôme est authentique et vérifié</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-10 w-10 text-red-600" />
+                      <div>
+                        <h2 className="text-2xl text-red-900">Diplôme Invalide ✗</h2>
+                        <p className="text-red-700">
+                          {verificationResult.error || 'Ce diplôme n\'a pas pu être vérifié'}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={handleReset}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  Tester un autre diplôme
+                </button>
               </div>
             </div>
 

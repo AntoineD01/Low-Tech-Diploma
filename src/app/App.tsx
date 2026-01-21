@@ -8,6 +8,7 @@ import { LoginPage } from '@/app/pages/LoginPage';
 import { IssuancePage } from '@/app/pages/IssuancePage';
 import { VerificationPage } from '@/app/pages/VerificationPage';
 import { StudentDashboard } from '@/app/pages/StudentDashboard';
+import { SchoolDashboard } from '@/app/pages/SchoolDashboard';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/verify" element={<VerificationPage />} />
             <Route path="/issue" element={<IssuancePage />} />
             <Route path="/my-diplomas" element={<StudentDashboard />} />
+            <Route path="/diplomas" element={<SchoolDashboard />} />
           </Routes>
         </Layout>
       </DiplomaProvider>

@@ -47,6 +47,26 @@ export const StudentDashboard = () => {
     }
   };
 
+  const downloadVerificationFile = (diploma: Diploma) => {
+    const verificationData = {
+      id: diploma.id,
+      student_name: diploma.student_name,
+      degree_name: diploma.degree_name,
+      issued_at: diploma.issued_at,
+      signature: diploma.signature,
+      revoked: diploma.revoked
+    };
+    
+    const dataStr = JSON.stringify(verificationData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `verification_${diploma.student_name}_${diploma.id}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   if (user?.role !== 'student') {
     return null;
   }
@@ -124,10 +144,17 @@ export const StudentDashboard = () => {
                   <div className="pt-4">
                     <button
                       onClick={() => downloadDiploma(diploma)}
-                      className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#45a049] text-white py-3 rounded-lg transition-colors"
+                      className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#45a049] text-white py-3 rounded-lg transition-colors mb-2"
                     >
                       <Download className="h-4 w-4" />
-                      Télécharger le diplôme
+                      Télécharger le PDF
+                    </button>
+                    <button
+                      onClick={() => downloadVerificationFile(diploma)}
+                      className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Télécharger le fichier de vérification
                     </button>
                   </div>
                 </div>
@@ -143,10 +170,10 @@ export const StudentDashboard = () => {
               <div>
                 <h3 className="text-lg mb-2 text-blue-900">Comment utiliser vos diplômes ?</h3>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Téléchargez le fichier JSON de votre diplôme</li>
+                  <li>• Téléchargez le <strong>fichier de vérification JSON</strong> de votre diplôme</li>
                   <li>• Partagez-le avec les employeurs ou institutions qui en ont besoin</li>
                   <li>• Ils pourront vérifier son authenticité sur la page de vérification</li>
-                  <li>• Le fichier contient toutes les informations et la signature cryptographique</li>
+                  <li>• Le fichier PDF est pour votre usage personnel, le fichier JSON est pour la vérification</li>
                 </ul>
               </div>
             </div>
