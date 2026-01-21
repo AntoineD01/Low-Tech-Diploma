@@ -715,37 +715,32 @@ def login():
 @app.route('/<path:path>')
 def serve_react(path):
     """Serve React frontend in production, or return JSON in development"""
-    # Don't intercept API routes
-    if path.startswith('login') or path.startswith('issue') or path.startswith('verify') or \
-       path.startswith('list') or path.startswith('diploma/') or path.startswith('download') or \
-       path.startswith('revoke') or path.startswith('bulk_issue'):
-        return jsonify({"error": "Not found"}), 404
-    
-    # Check if request accepts HTML (browser request)
-    if request.accept_mimetypes.accept_html:
-        # Serve React app if dist folder exists (production)
+    # Check if it's a static file request (js, css, images, etc.)
+    if path and '.' in path.split('/')[-1]:
+        # Try to serve static file from dist
         if os.path.exists('dist'):
-            if path != "" and os.path.exists(os.path.join('dist', path)):
+            file_path = os.path.join('dist', path)
+            if os.path.exists(file_path):
                 return send_from_directory('dist', path)
-            else:
-                return send_from_directory('dist', 'index.html')
-        else:
-            # Development mode - show message
-            return """
-            <html>
-                <body style="font-family: Arial; padding: 50px; text-align: center;">
-                    <h1>Low-Tech Diploma Platform</h1>
-                    <p>Backend API is running on port 5000</p>
-                    <p>To run the frontend in development mode:</p>
-                    <pre style="background: #f4f4f4; padding: 20px; border-radius: 5px; display: inline-block; text-align: left;">
+    
+    # For all other routes (HTML requests), serve index.html for React Router
+    if os.path.exists('dist'):
+        return send_from_directory('dist', 'index.html')
+    else:
+        # Development mode - show message
+        return """
+        <html>
+            <body style="font-family: Arial; padding: 50px; text-align: center;">
+                <h1>Low-Tech Diploma Platform</h1>
+                <p>Backend API is running on port 5000</p>
+                <p>To run the frontend in development mode:</p>
+                <pre style="background: #f4f4f4; padding: 20px; border-radius: 5px; display: inline-block; text-align: left;">
 npm install
 npm run dev</pre>
-                    <p>The frontend will be available at <a href="http://localhost:5173">http://localhost:5173</a></p>
-                </body>
-            </html>
-            """
-    # API requests return 404 for unknown routes
-    return jsonify({"error": "Not found"}), 404
+                <p>The frontend will be available at <a href="http://localhost:5173">http://localhost:5173</a></p>
+            </body>
+        </html>
+        """
 
 # -----------------------------
 # RUN
