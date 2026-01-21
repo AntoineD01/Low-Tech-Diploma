@@ -7,7 +7,9 @@ import sys
 def build_frontend():
     """Build the React frontend if dist/ doesn't exist"""
     
-    dist_path = os.path.join(os.path.dirname(__file__), 'dist')
+    # Get the root directory (parent of scripts/)
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    dist_path = os.path.join(root_dir, 'dist')
     
     # Check if dist exists and has files
     if os.path.exists(dist_path) and os.listdir(dist_path):
@@ -16,18 +18,22 @@ def build_frontend():
     
     print("🏗️  Building React frontend...")
     
+    # Change to root directory
+    os.chdir(root_dir)
+    
     # Check if node_modules exists
-    if not os.path.exists('node_modules'):
+    node_modules_path = os.path.join(root_dir, 'node_modules')
+    if not os.path.exists(node_modules_path):
         print("📦 Installing Node.js dependencies...")
         try:
-            subprocess.run(['npm', 'install'], check=True)
+            subprocess.run(['npm', 'install'], check=True, cwd=root_dir)
         except subprocess.CalledProcessError as e:
             print(f"❌ Failed to install dependencies: {e}")
             return False
     
     # Build the frontend
     try:
-        subprocess.run(['npm', 'run', 'build'], check=True)
+        subprocess.run(['npm', 'run', 'build'], check=True, cwd=root_dir)
         print("✅ Frontend built successfully!")
         return True
     except subprocess.CalledProcessError as e:
