@@ -136,34 +136,6 @@ os.makedirs(DIPLOMAS_DIR, exist_ok=True)
 os.makedirs(PDFS_DIR, exist_ok=True)
 
 # -----------------------------
-# WEB PAGES ROUTES
-# -----------------------------
-@app.route("/")
-@app.route("/index.html")
-def index():
-    return render_template("index.html")
-
-@app.route("/login.html")
-def login_page():
-    return render_template("login.html")
-
-@app.route("/issue.html")
-def issue_page():
-    return render_template("issue.html")
-
-@app.route("/verify.html")
-def verify_page():
-    return render_template("verify.html")
-
-@app.route("/my_diplomas.html")
-def my_diplomas_page():
-    return render_template("my_diplomas.html")
-
-@app.route("/all_diplomas.html")
-def all_diplomas_page():
-    return render_template("all_diplomas.html")
-
-# -----------------------------
 # GENERATE PDF DIPLOMA
 # -----------------------------
 def generate_diploma_pdf(diploma):
