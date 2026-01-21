@@ -54,6 +54,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(userData);
         localStorage.setItem('currentUser', JSON.stringify(userData));
         localStorage.setItem('token', token);
+        
+        // Trigger storage event for DiplomaContext to reload
+        window.dispatchEvent(new Event('storage'));
+        
         return true;
       }
       
@@ -68,6 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem('currentUser');
     localStorage.removeItem('token');
+    
+    // Trigger storage event to clear diplomas
+    window.dispatchEvent(new Event('storage'));
   };
 
   return (

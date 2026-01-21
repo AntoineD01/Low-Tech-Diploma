@@ -24,34 +24,65 @@ const DiplomaContext = createContext<DiplomaContextType | undefined>(undefined);
 
 export const DiplomaProvider = ({ children }: { children: ReactNode }) => {
   const [diplomas, setDiplomas] = useState<Diploma[]>([]);
+  const [token, setToken] = useState<string>('');
 
   const getToken = () => {
     return localStorage.getItem('token') || '';
   };
 
+  // Monitor token changes
+  useEffect(() => {
+    const currentToken = getToken();
+    setToken(currentToken);
+  }, []);
+
+  // Also check for token changes periodically or on storage events
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const currentToken = getToken();
+      setToken(currentToken);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check on focus (when user comes back to tab)
+    window.addEventListener('focus', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleStorageChange);
+    };
+  }, []);
+
   const loadDiplomas = async () => {
-    const token = getToken();
-    if (!token) return;
+    const currentToken = getToken();
+    if (!currentToken) {
+      setDiplomas([]);
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/list`, {
         headers: {
-          'Authorization': token,
+          'Authorization': currentToken,
         },
       });
 
       if (response.ok) {
         const data = await response.json();
         setDiplomas(data);
+      } else {
+        setDiplomas([]);
       }
     } catch (error) {
       console.error('Failed to load diplomas:', error);
+      setDiplomas([]);
     }
   };
 
   useEffect(() => {
     loadDiplomas();
-  }, []);
+  }, [token]);
 
   const issueDiploma = async (data: { studentName: string; studentEmail: string; title: string }): Promise<string> => {
     const token = getToken();
