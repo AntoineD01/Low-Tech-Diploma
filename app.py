@@ -711,8 +711,8 @@ def login():
 # -----------------------------
 # SERVE REACT FRONTEND
 # -----------------------------
-@app.route('/', defaults={'path': ''}, methods=['GET'])
-@app.route('/<path:path>', methods=['GET'])
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
 def serve_react(path):
     """Serve React frontend in production"""
     # Serve React app if dist folder exists (production)
@@ -723,8 +723,11 @@ def serve_react(path):
             if os.path.exists(file_path):
                 return send_from_directory('dist', path)
         
-        # For all other routes, serve index.html for React Router
-        return send_from_directory('dist', 'index.html')
+        # For all other routes (including /verify, /issue, etc.), serve index.html for React Router
+        try:
+            return send_from_directory('dist', 'index.html')
+        except Exception as e:
+            return f"Error serving index.html: {str(e)}", 500
     else:
         # Development mode - show message
         return """

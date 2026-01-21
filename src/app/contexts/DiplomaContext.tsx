@@ -112,7 +112,12 @@ export const DiplomaProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getUserDiplomas = (username: string): Diploma[] => {
-    return diplomas.filter((d: any) => d.student_name === username);
+    return diplomas.filter((d: any) => 
+      d.student_name === username || 
+      d.student_email === username ||
+      d.student_name?.toLowerCase() === username.toLowerCase() ||
+      d.student_email?.toLowerCase() === username.toLowerCase()
+    );
   };
 
   const revokeDiploma = async (id: string): Promise<void> => {
