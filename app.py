@@ -715,6 +715,11 @@ def login():
 @app.route('/<path:path>', methods=['GET'])
 def serve_react(path):
     """Serve React frontend in production"""
+    # Skip API routes - let them be handled by their specific endpoints
+    api_routes = ['issue', 'bulk_issue', 'diploma', 'verify', 'revoke', 'list', 'download', 'download_pdf', 'login']
+    if path and path.split('/')[0] in api_routes:
+        return jsonify({"error": "Not found"}), 404
+    
     # Serve React app if dist folder exists (production)
     if os.path.exists('dist'):
         # Check if it's a static file request (js, css, images, etc.)
