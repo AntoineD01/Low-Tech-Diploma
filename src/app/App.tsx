@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/app/contexts/AuthContext';
 import { DiplomaProvider } from '@/app/contexts/DiplomaContext';
 import { Layout } from '@/app/components/Layout';
@@ -11,20 +11,18 @@ import { StudentDashboard } from '@/app/pages/StudentDashboard';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <DiplomaProvider>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/verify" element={<VerificationPage />} />
-              <Route path="/issue" element={<IssuancePage />} />
-              <Route path="/my-diplomas" element={<StudentDashboard />} />
-            </Routes>
-          </Layout>
-        </DiplomaProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <DiplomaProvider>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/verify" element={<VerificationPage />} />
+            <Route path="/issue" element={<IssuancePage />} />
+            <Route path="/my-diplomas" element={<StudentDashboard />} />
+          </Routes>
+        </Layout>
+      </DiplomaProvider>
+    </AuthProvider>
   );
 }
