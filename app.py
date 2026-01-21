@@ -715,31 +715,43 @@ def login():
 @app.route('/<path:path>')
 def serve_react(path):
     """Serve React frontend in production"""
+    dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
+    index_path = os.path.join(dist_path, 'index.html')
+    
+    # Debug logging
+    print(f"📍 Requested path: {path}")
+    print(f"📂 Dist folder exists: {os.path.exists(dist_path)}")
+    print(f"📄 Index.html exists: {os.path.exists(index_path)}")
+    
     # Serve React app if dist folder exists (production)
-    if os.path.exists('dist'):
+    if os.path.exists(dist_path):
         # Check if it's a static file request (js, css, images, etc.)
         if path and '.' in path.split('/')[-1]:
-            file_path = os.path.join('dist', path)
+            file_path = os.path.join(dist_path, path)
             if os.path.exists(file_path):
-                return send_from_directory('dist', path)
+                print(f"✅ Serving static file: {path}")
+                return send_from_directory(dist_path, path)
+            else:
+                print(f"❌ Static file not found: {file_path}")
         
         # For all other routes (including /verify, /issue, etc.), serve index.html for React Router
-        try:
-            return send_from_directory('dist', 'index.html')
-        except Exception as e:
-            return f"Error serving index.html: {str(e)}", 500
+        if os.path.exists(index_path):
+            print(f"✅ Serving index.html for route: {path}")
+            return send_from_directory(dist_path, 'index.html')
+        else:
+            return f"Error: index.html not found at {index_path}", 404
     else:
         # Development mode - show message
-        return """
+        return f"""
         <html>
             <body style="font-family: Arial; padding: 50px; text-align: center;">
                 <h1>Low-Tech Diploma Platform</h1>
-                <p>Backend API is running on port 5000</p>
+                <p>Backend API is running on port {os.getenv('PORT', 5000)}</p>
+                <p style="color: red;">⚠️ dist/ folder not found at: {dist_path}</p>
                 <p>To run the frontend in development mode:</p>
                 <pre style="background: #f4f4f4; padding: 20px; border-radius: 5px; display: inline-block; text-align: left;">
 npm install
-npm run dev</pre>
-                <p>The frontend will be available at <a href="http://localhost:5173">http://localhost:5173</a></p>
+npm run build</pre>
             </body>
         </html>
         """
