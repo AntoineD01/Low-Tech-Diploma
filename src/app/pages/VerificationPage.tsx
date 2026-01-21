@@ -61,28 +61,29 @@ export const VerificationPage = () => {
             </p>
           </div>
 
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#4CAF50] transition-colors">
+          <label 
+            htmlFor="diploma-file" 
+            className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#4CAF50] transition-colors cursor-pointer"
+          >
             <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <label htmlFor="diploma-file" className="cursor-pointer">
-              <span className="text-lg text-gray-700">
-                {diplomaFile ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <FileText className="h-5 w-5 text-[#4CAF50]" />
-                    {diplomaFile.name}
-                  </span>
-                ) : (
-                  'Cliquez pour sélectionner un fichier JSON'
-                )}
-              </span>
-              <input
-                id="diploma-file"
-                type="file"
-                accept=".json,application/json"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-          </div>
+            <span className="text-lg text-gray-700">
+              {diplomaFile ? (
+                <span className="flex items-center justify-center gap-2">
+                  <FileText className="h-5 w-5 text-[#4CAF50]" />
+                  {diplomaFile.name}
+                </span>
+              ) : (
+                'Cliquez pour sélectionner un fichier JSON'
+              )}
+            </span>
+            <input
+              id="diploma-file"
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
 
           {diplomaFile && (
             <div className="mt-6">
