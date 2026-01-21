@@ -16,22 +16,35 @@ export const StudentDashboard = () => {
       return;
     }
     
-    if (user?.email) {
-      const diplomas = getUserDiplomas(user.email);
+    if (user?.username) {
+      const diplomas = getUserDiplomas(user.username);
       setUserDiplomas(diplomas);
     }
   }, [user, getUserDiplomas, navigate]);
 
-  const downloadDiploma = (diploma: Diploma) => {
-    const dataStr = JSON.stringify(diploma, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `diplome_${diploma.id}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+  const downloadDiploma = async (diploma: Diploma) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/download_pdf/${diploma.id}`, {
+        headers: {
+          'Authorization': token,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `diplome_${diploma.student_name}_${diploma.id}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Failed to download diploma:', error);
+    }
   };
 
   if (user?.role !== 'student') {
@@ -72,16 +85,16 @@ export const StudentDashboard = () => {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl mb-2">{diploma.title}</h3>
-                  <p className="text-sm text-gray-300 line-clamp-2">{diploma.description}</p>
+                  <h3 className="text-xl mb-2">{diploma.degree_name}</h3>
+                  <p className="text-sm text-gray-300 line-clamp-2">Diplôme certifié</p>
                 </div>
 
                 <div className="p-6 space-y-4">
                   <div className="flex items-start gap-3">
                     <Building className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-600">Établissement</p>
-                      <p className="text-gray-900">{diploma.schoolName}</p>
+                      <p className="text-sm text-gray-600">Étudiant</p>
+                      <p className="text-gray-900">{diploma.student_name}</p>
                     </div>
                   </div>
 
@@ -90,7 +103,7 @@ export const StudentDashboard = () => {
                     <div>
                       <p className="text-sm text-gray-600">Date d'émission</p>
                       <p className="text-gray-900">
-                        {new Date(diploma.issueDate).toLocaleDateString('fr-FR', {
+                        {new Date(diploma.issued_at).toLocaleDateString('fr-FR', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',

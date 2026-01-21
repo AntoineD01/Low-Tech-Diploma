@@ -24,7 +24,7 @@ export const VerificationPage = () => {
 
     try {
       const fileContent = await diplomaFile.text();
-      const result = verifyDiploma(fileContent);
+      const result = await verifyDiploma(fileContent);
       setVerificationResult(result);
     } catch (error) {
       setVerificationResult({
@@ -130,7 +130,7 @@ export const VerificationPage = () => {
                     <User className="h-5 w-5" />
                     <span className="text-sm">Étudiant</span>
                   </div>
-                  <p className="text-xl">{verificationResult.diploma.studentName}</p>
+                  <p className="text-xl">{verificationResult.diploma.student_name}</p>
                 </div>
 
                 <div>
@@ -138,32 +138,17 @@ export const VerificationPage = () => {
                     <FileText className="h-5 w-5" />
                     <span className="text-sm">Titre du diplôme</span>
                   </div>
-                  <p className="text-xl">{verificationResult.diploma.title}</p>
+                  <p className="text-xl">{verificationResult.diploma.degree_name}</p>
                 </div>
 
                 <div>
                   <div className="flex items-center gap-2 text-gray-600 mb-2">
-                    <Building className="h-5 w-5" />
-                    <span className="text-sm">Établissement</span>
-                  </div>
-                  <p className="text-xl">{verificationResult.diploma.schoolName}</p>
-                </div>
 
-                <div>
-                  <div className="flex items-center gap-2 text-gray-600 mb-2">
-                    <FileText className="h-5 w-5" />
-                    <span className="text-sm">Description</span>
-                  </div>
-                  <p className="text-gray-700">{verificationResult.diploma.description}</p>
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 text-gray-600 mb-2">
                     <Calendar className="h-5 w-5" />
                     <span className="text-sm">Date d'émission</span>
                   </div>
                   <p className="text-lg">
-                    {new Date(verificationResult.diploma.issueDate).toLocaleDateString('fr-FR', {
+                    {new Date(verificationResult.diploma.issued_at).toLocaleDateString('fr-FR', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
@@ -174,10 +159,10 @@ export const VerificationPage = () => {
                 <div className="pt-4 border-t border-gray-200">
                   <div className="flex items-center gap-2 text-gray-600 mb-2">
                     <Shield className="h-5 w-5" />
-                    <span className="text-sm">Hash cryptographique</span>
+                    <span className="text-sm">Signature cryptographique</span>
                   </div>
                   <p className="text-xs font-mono bg-gray-100 p-3 rounded break-all">
-                    {verificationResult.diploma.hash}
+                    {verificationResult.diploma.signature}
                   </p>
                 </div>
 

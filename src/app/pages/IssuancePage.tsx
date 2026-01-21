@@ -34,15 +34,16 @@ export const IssuancePage = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
 
     try {
-      issueDiploma({
-        ...formData,
-        schoolName: user?.name || 'École',
+      await issueDiploma({
+        studentName: formData.studentName,
+        studentEmail: formData.studentEmail,
+        title: formData.title,
       });
       
       setSuccess(true);

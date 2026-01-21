@@ -1,121 +1,144 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { API_BASE_URL } from '@/config';
 
 export interface Diploma {
   id: string;
-  studentName: string;
-  studentEmail: string;
-  title: string;
-  description: string;
-  issueDate: string;
-  schoolName: string;
-  hash: string;
+  student_name: string;
+  student_email?: string;
+  degree_name: string;
+  issued_at: string;
+  signature: string;
   revoked: boolean;
 }
 
 interface DiplomaContextType {
   diplomas: Diploma[];
-  issueDiploma: (diploma: Omit<Diploma, 'id' | 'hash' | 'revoked'>) => string;
-  verifyDiploma: (diplomaData: string) => { valid: boolean; diploma?: Diploma; error?: string };
-  getUserDiplomas: (email: string) => Diploma[];
-  revokeDiploma: (id: string) => void;
+  issueDiploma: (data: { studentName: string; studentEmail: string; title: string }) => Promise<string>;
+  verifyDiploma: (diplomaData: string) => Promise<{ valid: boolean; diploma?: Diploma; error?: string }>;
+  getUserDiplomas: (username: string) => Diploma[];
+  revokeDiploma: (id: string) => Promise<void>;
+  loadDiplomas: () => Promise<void>;
 }
 
 const DiplomaContext = createContext<DiplomaContextType | undefined>(undefined);
 
-// Simple hash function for demo purposes
-const simpleHash = async (data: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const dataBuffer = encoder.encode(data);
-  
-  try {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch {
-    // Fallback for environments without crypto.subtle
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16).padStart(64, '0');
-  }
-};
-
 export const DiplomaProvider = ({ children }: { children: ReactNode }) => {
   const [diplomas, setDiplomas] = useState<Diploma[]>([]);
 
-  useEffect(() => {
-    // Load diplomas from localStorage
-    const saved = localStorage.getItem('diplomas');
-    if (saved) {
-      setDiplomas(JSON.parse(saved));
+  const getToken = () => {
+    return localStorage.getItem('token') || '';
+  };
+
+  const loadDiplomas = async () => {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/list`, {
+        headers: {
+          'Authorization': token,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDiplomas(data);
+      }
+    } catch (error) {
+      console.error('Failed to load diplomas:', error);
     }
+  };
+
+  useEffect(() => {
+    loadDiplomas();
   }, []);
 
-  useEffect(() => {
-    // Save diplomas to localStorage
-    localStorage.setItem('diplomas', JSON.stringify(diplomas));
-  }, [diplomas]);
-
-  const issueDiploma = (diplomaData: Omit<Diploma, 'id' | 'hash' | 'revoked'>): string => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const dataToHash = JSON.stringify({ ...diplomaData, id });
+  const issueDiploma = async (data: { studentName: string; studentEmail: string; title: string }): Promise<string> => {
+    const token = getToken();
     
-    simpleHash(dataToHash).then(hash => {
-      const newDiploma: Diploma = {
-        ...diplomaData,
-        id,
-        hash,
-        revoked: false,
-      };
-      
-      setDiplomas(prev => [...prev, newDiploma]);
-    });
-    
-    return id;
-  };
-
-  const verifyDiploma = (diplomaData: string): { valid: boolean; diploma?: Diploma; error?: string } => {
     try {
-      const parsedDiploma = JSON.parse(diplomaData) as Diploma;
-      
-      // Check if diploma exists in our database
-      const storedDiploma = diplomas.find(d => d.id === parsedDiploma.id);
-      
-      if (!storedDiploma) {
-        return { valid: false, error: 'Diplôme non trouvé dans la base de données' };
+      const response = await fetch(`${API_BASE_URL}/issue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+        body: JSON.stringify({
+          student_name: data.studentName,
+          student_email: data.studentEmail,
+          degree_name: data.title,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Reload diplomas to get the new one
+        await loadDiplomas();
+        return result.diploma_id;
+      } else {
+        throw new Error('Failed to issue diploma');
       }
-      
-      // Check if revoked
-      if (storedDiploma.revoked) {
-        return { valid: false, diploma: storedDiploma, error: 'Ce diplôme a été révoqué' };
-      }
-      
-      // Verify hash matches
-      if (storedDiploma.hash !== parsedDiploma.hash) {
-        return { valid: false, error: 'Le hash du diplôme ne correspond pas' };
-      }
-      
-      return { valid: true, diploma: storedDiploma };
     } catch (error) {
-      return { valid: false, error: 'Format de diplôme invalide' };
+      console.error('Failed to issue diploma:', error);
+      throw error;
     }
   };
 
-  const getUserDiplomas = (email: string): Diploma[] => {
-    return diplomas.filter(d => d.studentEmail === email);
+  const verifyDiploma = async (diplomaData: string): Promise<{ valid: boolean; diploma?: Diploma; error?: string }> => {
+    try {
+      const parsedDiploma = JSON.parse(diplomaData);
+      
+      const response = await fetch(`${API_BASE_URL}/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(parsedDiploma),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return {
+          valid: result.valid,
+          diploma: parsedDiploma,
+          error: result.reason,
+        };
+      } else {
+        return { valid: false, error: 'Failed to verify diploma' };
+      }
+    } catch (error) {
+      return { valid: false, error: 'Invalid diploma format' };
+    }
   };
 
-  const revokeDiploma = (id: string) => {
-    setDiplomas(prev => prev.map(d => 
-      d.id === id ? { ...d, revoked: true } : d
-    ));
+  const getUserDiplomas = (username: string): Diploma[] => {
+    return diplomas.filter((d: any) => d.student_name === username);
+  };
+
+  const revokeDiploma = async (id: string): Promise<void> => {
+    const token = getToken();
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/revoke`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (response.ok) {
+        await loadDiplomas();
+      }
+    } catch (error) {
+      console.error('Failed to revoke diploma:', error);
+      throw error;
+    }
   };
 
   return (
-    <DiplomaContext.Provider value={{ diplomas, issueDiploma, verifyDiploma, getUserDiplomas, revokeDiploma }}>
+    <DiplomaContext.Provider value={{ diplomas, issueDiploma, verifyDiploma, getUserDiplomas, revokeDiploma, loadDiplomas }}>
       {children}
     </DiplomaContext.Provider>
   );
