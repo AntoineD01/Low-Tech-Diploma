@@ -1,0 +1,145 @@
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Calendar, Building, Award, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { useDiplomas, Diploma } from '@/app/contexts/DiplomaContext';
+import { useNavigate } from 'react-router-dom';
+
+export const StudentDashboard = () => {
+  const { user } = useAuth();
+  const { getUserDiplomas } = useDiplomas();
+  const navigate = useNavigate();
+  const [userDiplomas, setUserDiplomas] = useState<Diploma[]>([]);
+
+  useEffect(() => {
+    if (user?.role !== 'student') {
+      navigate('/');
+      return;
+    }
+    
+    if (user?.email) {
+      const diplomas = getUserDiplomas(user.email);
+      setUserDiplomas(diplomas);
+    }
+  }, [user, getUserDiplomas, navigate]);
+
+  const downloadDiploma = (diploma: Diploma) => {
+    const dataStr = JSON.stringify(diploma, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `diplome_${diploma.id}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  if (user?.role !== 'student') {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-4xl mb-2">Mes Diplômes</h1>
+          <p className="text-xl text-gray-600">
+            Gérez et téléchargez vos diplômes numériques
+          </p>
+        </div>
+
+        {userDiplomas.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <Award className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-2xl mb-2 text-gray-700">Aucun diplôme trouvé</h2>
+            <p className="text-gray-500">
+              Vous n'avez pas encore de diplômes émis. Vos diplômes apparaîtront ici une fois qu'ils seront émis par votre établissement.
+            </p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {userDiplomas.map((diploma) => (
+              <div
+                key={diploma.id}
+                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+              >
+                <div className="bg-gradient-to-br from-[#2c3e50] to-[#34495e] p-6 text-white">
+                  <div className="flex items-start justify-between mb-3">
+                    <Award className="h-8 w-8" />
+                    {diploma.revoked && (
+                      <span className="bg-red-500 text-xs px-2 py-1 rounded">
+                        Révoqué
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl mb-2">{diploma.title}</h3>
+                  <p className="text-sm text-gray-300 line-clamp-2">{diploma.description}</p>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Building className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Établissement</p>
+                      <p className="text-gray-900">{diploma.schoolName}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Date d'émission</p>
+                      <p className="text-gray-900">
+                        {new Date(diploma.issueDate).toLocaleDateString('fr-FR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {diploma.revoked && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-800">
+                        Ce diplôme a été révoqué et n'est plus valide
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="pt-4">
+                    <button
+                      onClick={() => downloadDiploma(diploma)}
+                      className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#45a049] text-white py-3 rounded-lg transition-colors"
+                    >
+                      <Download className="h-4 w-4" />
+                      Télécharger le diplôme
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {userDiplomas.length > 0 && (
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <div className="flex items-start gap-3">
+              <FileText className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="text-lg mb-2 text-blue-900">Comment utiliser vos diplômes ?</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Téléchargez le fichier JSON de votre diplôme</li>
+                  <li>• Partagez-le avec les employeurs ou institutions qui en ont besoin</li>
+                  <li>• Ils pourront vérifier son authenticité sur la page de vérification</li>
+                  <li>• Le fichier contient toutes les informations et la signature cryptographique</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

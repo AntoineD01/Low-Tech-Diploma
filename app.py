@@ -27,7 +27,7 @@ if not MONGO_URI:
     print("ERROR: MONGO_URI environment variable is not set!")
     sys.exit(1)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='dist', static_url_path='')
 # Restrict CORS to specific origin (use '*' only for development)
 CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != '*' else '*')
 
@@ -737,7 +737,51 @@ def login():
     return jsonify({"error": "Invalid credentials"}), 401
 
 # -----------------------------
+# SERVE REACT FRONTEND
+# -----------------------------
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    """Serve React frontend in production, or return JSON in development"""
+    # Check if request accepts HTML (browser request)
+    if request.accept_mimetypes.accept_html:
+        # Serve React app if dist folder exists (production)
+        if os.path.exists('dist'):
+            if path != "" and os.path.exists(os.path.join('dist', path)):
+                return send_from_directory('dist', path)
+            else:
+                return send_from_directory('dist', 'index.html')
+        else:
+            # Development mode - show message
+            return """
+            <html>
+                <body style="font-family: Arial; padding: 50px; text-align: center;">
+                    <h1>Low-Tech Diploma Platform</h1>
+                    <p>Backend API is running on port 5000</p>
+                    <p>To run the frontend in development mode:</p>
+                    <pre style="background: #f4f4f4; padding: 20px; border-radius: 5px; display: inline-block; text-align: left;">
+npm install
+npm run dev</pre>
+                    <p>The frontend will be available at <a href="http://localhost:5173">http://localhost:5173</a></p>
+                </body>
+            </html>
+            """
+    # API requests return 404 for unknown routes
+    return jsonify({"error": "Not found"}), 404
+
+# -----------------------------
 # RUN
 # -----------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Get port from environment variable (for Koyeb, Heroku, etc.) or use 5000
+    port = int(os.getenv('PORT', 5000))
+    # Disable debug in production
+    debug_mode = os.getenv('FLASK_ENV') == 'development'
+    
+    print(f"🚀 Starting Flask app on port {port}")
+    if os.path.exists('dist'):
+        print("✅ Serving React frontend from dist/")
+    else:
+        print("⚠️  No dist/ folder found - running in API-only mode")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

@@ -1,0 +1,2 @@
+# Ce fichier permet de garder le dossier diplomas/ dans Git
+# Les fichiers .json (diplômes) sont ignorés par .gitignore (stockés dans MongoDB en production)

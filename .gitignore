@@ -1,19 +1,92 @@
-# Dossier des clés cryptographiques
-keys/
+# ========================================
+# DONNÉES SENSIBLES (IMPORTANT!)
+# ========================================
+# Clés cryptographiques
+keys/*.pem
+!keys/.gitkeep
 
-# Données sensibles
+# Variables d'environnement
+.env
+.env.local
+.env.*.local
+
+# Données utilisateurs (dev only - MongoDB en prod)
 registry.json
 users.json
 
-# Fichiers de diplômes
-diplomas/
+# Diplômes (stockés dans MongoDB en production)
+diplomas/*.json
+!diplomas/.gitkeep
 
-# Environnements Python
+# ========================================
+# PYTHON
+# ========================================
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 *.pyc
 *.pyo
 *.pyd
 
 # Environnements virtuels
 venv/
-.env
+env/
+ENV/
+.venv
+
+# ========================================
+# NODE.JS / REACT
+# ========================================
+# Dépendances
+node_modules/
+.pnp
+.pnp.*
+
+# Build production
+/dist
+/build
+
+# Cache
+.cache/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ========================================
+# IDE / ÉDITEURS
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ========================================
+# SYSTÈME
+# ========================================
+Thumbs.db
+desktop.ini
+
+# ========================================
+# ARCHIVES / BACKUP
+# ========================================
+*.bak
+*.tmp
+*.temp
+
+# ========================================
+# TESTS
+# ========================================
+coverage/
+.pytest_cache/
+.coverage
+htmlcov/
