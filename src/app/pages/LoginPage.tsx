@@ -57,16 +57,16 @@ export const LoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm mb-2 text-gray-700">
-                Adresse email
+                Nom d'utilisateur
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent outline-none transition-all"
-                placeholder="vous@example.com"
+                placeholder="Votre nom ou identifiant"
               />
             </div>
 
@@ -99,9 +99,8 @@ export const LoginPage = () => {
               <strong>Comptes de démonstration :</strong>
             </p>
             <div className="mt-3 space-y-2 text-sm text-gray-600">
-              <p>📚 École : <code className="bg-gray-100 px-2 py-1 rounded">school@example.com</code></p>
-              <p>🎓 Étudiant : <code className="bg-gray-100 px-2 py-1 rounded">student@example.com</code></p>
-              <p className="text-center mt-2">Mot de passe : <code className="bg-gray-100 px-2 py-1 rounded">password123</code></p>
+              <p>📚 École : <code className="bg-gray-100 px-2 py-1 rounded">school</code> / <code className="bg-gray-100 px-2 py-1 rounded">schoolpass</code></p>
+              <p>🎓 Étudiant : <code className="bg-gray-100 px-2 py-1 rounded">alice</code> / <code className="bg-gray-100 px-2 py-1 rounded">alicepass</code></p>
             </div>
           </div>
         </div>

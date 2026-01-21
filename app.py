@@ -715,6 +715,12 @@ def login():
 @app.route('/<path:path>')
 def serve_react(path):
     """Serve React frontend in production, or return JSON in development"""
+    # Don't intercept API routes
+    if path.startswith('login') or path.startswith('issue') or path.startswith('verify') or \
+       path.startswith('list') or path.startswith('diploma/') or path.startswith('download') or \
+       path.startswith('revoke') or path.startswith('bulk_issue'):
+        return jsonify({"error": "Not found"}), 404
+    
     # Check if request accepts HTML (browser request)
     if request.accept_mimetypes.accept_html:
         # Serve React app if dist folder exists (production)
