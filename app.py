@@ -274,7 +274,10 @@ def generate_diploma_pdf(diploma):
     
     # Date
     issue_date = datetime.fromisoformat(diploma['issued_at'].replace('Z', '+00:00'))
-    date_str = issue_date.strftime("%d %B %Y")
+    # French month names
+    months_fr = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
+                 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+    date_str = f"{issue_date.day} {months_fr[issue_date.month]} {issue_date.year}"
     c.setFont("Helvetica", 12)
     c.setFillColor(colors.black)
     c.drawCentredString(width / 2, height - 16*cm, f"Délivré le {date_str}")
