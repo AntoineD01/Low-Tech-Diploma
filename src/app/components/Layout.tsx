@@ -19,7 +19,7 @@ export const Layout = ({ children }: LayoutProps) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <img src="/Logo.png" alt="LowtechDiploma Logo" className="h-10 w-10" />
+              <Shield className="h-8 w-8" />
               <span className="text-xl font-semibold">LowtechDiploma</span>
             </Link>
 
