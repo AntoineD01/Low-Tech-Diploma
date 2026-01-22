@@ -786,10 +786,10 @@ def login():
 # -----------------------------
 # SERVE REACT FRONTEND
 # -----------------------------
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
+@app.route('/', defaults={'path': ''}, methods=['GET'])
+@app.route('/<path:path>', methods=['GET'])
 def serve_react(path):
-    """Serve React frontend in production"""
+    """Serve React frontend in production - handles all GET requests for SPA routing"""
     dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
     index_path = os.path.join(dist_path, 'index.html')
     
