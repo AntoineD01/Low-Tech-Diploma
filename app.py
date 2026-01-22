@@ -314,6 +314,11 @@ def auth_required(role=None):
             token = request.headers.get("Authorization")
             if not token:
                 return jsonify({"error": "Missing token"}), 401
+            
+            # Support both "Bearer token" and raw token formats
+            if token.startswith("Bearer "):
+                token = token[7:]  # Remove "Bearer " prefix
+            
             try:
                 decoded = jwt.decode(token, SECRET, algorithms=["HS256"])
             except jwt.ExpiredSignatureError:
