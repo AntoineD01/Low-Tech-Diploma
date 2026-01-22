@@ -31,6 +31,81 @@ app = Flask(__name__, static_folder='dist', static_url_path='')
 # Restrict CORS to specific origin (use '*' only for development)
 CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != '*' else '*')
 
+# -----------------------------
+# ERROR HANDLERS
+# -----------------------------
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors with detailed debugging information"""
+    error_info = {
+        'error': '404 Not Found',
+        'message': 'The requested resource was not found',
+        'path': request.path,
+        'method': request.method,
+        'url': request.url,
+        'referrer': request.referrer,
+        'user_agent': str(request.user_agent),
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    
+    # Log to server console
+    print("\n" + "="*80)
+    print("❌ 404 ERROR DETAILS:")
+    for key, value in error_info.items():
+        print(f"  {key}: {value}")
+    print("="*80 + "\n")
+    
+    # Return JSON for API requests, HTML for browser requests
+    if request.path.startswith('/api/') or request.accept_mimetypes.accept_json:
+        return jsonify(error_info), 404
+    
+    # For HTML requests, return a debug page
+    return f"""
+    <html>
+        <head>
+            <title>404 - Not Found</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 50px; background: #f5f5f5; }}
+                .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                h1 {{ color: #d32f2f; }}
+                .error-details {{ background: #f5f5f5; padding: 15px; border-radius: 4px; margin: 20px 0; }}
+                .error-details pre {{ margin: 0; overflow-x: auto; }}
+                code {{ background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }}
+            </style>
+            <script>
+                // Log error details to browser console
+                console.error('404 Error Details:', {json.dumps(error_info, indent=2)});
+            </script>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🔍 404 - Page Not Found</h1>
+                <p>The requested page could not be found.</p>
+                <div class="error-details">
+                    <h3>Debug Information:</h3>
+                    <pre>{json.dumps(error_info, indent=2)}</pre>
+                </div>
+                <p><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+    </html>
+    """, 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors with debugging information"""
+    error_info = {
+        'error': '500 Internal Server Error',
+        'message': str(error),
+        'path': request.path,
+        'method': request.method,
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    print("\n" + "="*80)
+    print("❌ 500 ERROR:", str(error))
+    print("="*80 + "\n")
+    return jsonify(error_info), 500
+
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -718,28 +793,55 @@ def serve_react(path):
     dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
     index_path = os.path.join(dist_path, 'index.html')
     
-    # Debug logging
-    print(f"📍 Requested path: {path}")
-    print(f"📂 Dist folder exists: {os.path.exists(dist_path)}")
-    print(f"📄 Index.html exists: {os.path.exists(index_path)}")
+    # Enhanced debug logging
+    print("\n" + "-"*80)
+    print(f"📍 ROUTE REQUEST: {request.method} /{path}")
+    print(f"   Full URL: {request.url}")
+    print(f"   Referrer: {request.referrer}")
+    print(f"   Accept: {request.headers.get('Accept', 'N/A')[:100]}")
+    print(f"📂 Dist path: {dist_path}")
+    print(f"   Dist exists: {os.path.exists(dist_path)}")
+    print(f"📄 Index path: {index_path}")
+    print(f"   Index exists: {os.path.exists(index_path)}")
     
     # Serve React app if dist folder exists (production)
     if os.path.exists(dist_path):
         # Check if it's a static file request (js, css, images, etc.)
         if path and '.' in path.split('/')[-1]:
             file_path = os.path.join(dist_path, path)
+            print(f"🔍 Checking static file: {file_path}")
             if os.path.exists(file_path):
                 print(f"✅ Serving static file: {path}")
+                print("-"*80 + "\n")
                 return send_from_directory(dist_path, path)
             else:
-                print(f"❌ Static file not found: {file_path}")
+                print(f"❌ Static file NOT FOUND: {file_path}")
+                print(f"   Available files in dist: {os.listdir(dist_path)[:10]}")
+                print("-"*80 + "\n")
+                # Return error with debugging info
+                error_data = {
+                    'error': 'Static file not found',
+                    'path': path,
+                    'file_path': file_path,
+                    'dist_contents': os.listdir(dist_path)[:20]
+                }
+                print(f"⚠️ RETURNING 404 for static file")
+                return jsonify(error_data), 404
         
         # For all other routes (including /verify, /issue, etc.), serve index.html for React Router
         if os.path.exists(index_path):
-            print(f"✅ Serving index.html for route: {path}")
+            print(f"✅ Serving index.html for SPA route: /{path}")
+            print("-"*80 + "\n")
             return send_from_directory(dist_path, 'index.html')
         else:
-            return f"Error: index.html not found at {index_path}", 404
+            print(f"❌ CRITICAL: index.html not found at {index_path}")
+            print("-"*80 + "\n")
+            return jsonify({
+                'error': 'index.html not found',
+                'index_path': index_path,
+                'dist_exists': os.path.exists(dist_path),
+                'dist_contents': os.listdir(dist_path) if os.path.exists(dist_path) else []
+            }), 404
     else:
         # Development mode - show message
         return f"""
