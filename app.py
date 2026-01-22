@@ -112,11 +112,12 @@ def internal_error(error):
 @app.before_request
 def log_request():
     """Log all incoming requests before routing"""
-    print("\n" + "🔵"*40)
-    print(f"📨 INCOMING REQUEST: {request.method} {request.path}")
-    print(f"   Full URL: {request.url}")
-    print(f"   Endpoint will be: {request.endpoint if hasattr(request, 'endpoint') else 'unknown'}")
-    print("🔵"*40 + "\n")
+    print("\n" + "🔵"*40, flush=True)
+    print(f"📨 INCOMING REQUEST: {request.method} {request.path}", flush=True)
+    print(f"   Full URL: {request.url}", flush=True)
+    print(f"   Endpoint will be: {request.endpoint if hasattr(request, 'endpoint') else 'unknown'}", flush=True)
+    print("🔵"*40 + "\n", flush=True)
+    sys.stdout.flush()
 
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -798,6 +799,16 @@ def login():
 # -----------------------------
 # DEBUG ROUTES (can remove in production)
 # -----------------------------
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "ok",
+        "timestamp": datetime.utcnow().isoformat(),
+        "dist_exists": os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')),
+        "message": "Backend is running"
+    })
+
 @app.route("/debug/routes", methods=["GET"])
 def debug_routes():
     """List all registered routes for debugging"""
@@ -813,38 +824,41 @@ def debug_routes():
 # -----------------------------
 # SERVE REACT FRONTEND
 # -----------------------------
-@app.route('/', defaults={'path': ''}, methods=['GET'])
-@app.route('/<path:path>', methods=['GET'])
+@app.route('/', defaults={'path': ''}, methods=['GET', 'HEAD'])
+@app.route('/<path:path>', methods=['GET', 'HEAD'])
 def serve_react(path):
     """Serve React frontend in production - handles all GET requests for SPA routing"""
     dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
     index_path = os.path.join(dist_path, 'index.html')
     
-    # Enhanced debug logging
-    print("\n" + "-"*80)
-    print(f"📍 ROUTE REQUEST: {request.method} /{path}")
-    print(f"   Full URL: {request.url}")
-    print(f"   Referrer: {request.referrer}")
-    print(f"   Accept: {request.headers.get('Accept', 'N/A')[:100]}")
-    print(f"📂 Dist path: {dist_path}")
-    print(f"   Dist exists: {os.path.exists(dist_path)}")
-    print(f"📄 Index path: {index_path}")
-    print(f"   Index exists: {os.path.exists(index_path)}")
+    # Enhanced debug logging with forced flush
+    print("\n" + "-"*80, flush=True)
+    print(f"📍 ROUTE REQUEST: {request.method} /{path}", flush=True)
+    print(f"   Full URL: {request.url}", flush=True)
+    print(f"   Referrer: {request.referrer}", flush=True)
+    print(f"   Accept: {request.headers.get('Accept', 'N/A')[:100]}", flush=True)
+    print(f"📂 Dist path: {dist_path}", flush=True)
+    print(f"   Dist exists: {os.path.exists(dist_path)}", flush=True)
+    print(f"📄 Index path: {index_path}", flush=True)
+    print(f"   Index exists: {os.path.exists(index_path)}", flush=True)
+    sys.stdout.flush()
     
     # Serve React app if dist folder exists (production)
     if os.path.exists(dist_path):
         # Check if it's a static file request (js, css, images, etc.)
         if path and '.' in path.split('/')[-1]:
             file_path = os.path.join(dist_path, path)
-            print(f"🔍 Checking static file: {file_path}")
+            print(f"🔍 Checking static file: {file_path}", flush=True)
             if os.path.exists(file_path):
-                print(f"✅ Serving static file: {path}")
-                print("-"*80 + "\n")
+                print(f"✅ Serving static file: {path}", flush=True)
+                print("-"*80 + "\n", flush=True)
+                sys.stdout.flush()
                 return send_from_directory(dist_path, path)
             else:
-                print(f"❌ Static file NOT FOUND: {file_path}")
-                print(f"   Available files in dist: {os.listdir(dist_path)[:10]}")
-                print("-"*80 + "\n")
+                print(f"❌ Static file NOT FOUND: {file_path}", flush=True)
+                print(f"   Available files in dist: {os.listdir(dist_path)[:10]}", flush=True)
+                print("-"*80 + "\n", flush=True)
+                sys.stdout.flush()
                 # Return error with debugging info
                 error_data = {
                     'error': 'Static file not found',
@@ -857,12 +871,14 @@ def serve_react(path):
         
         # For all other routes (including /verify, /issue, etc.), serve index.html for React Router
         if os.path.exists(index_path):
-            print(f"✅ Serving index.html for SPA route: /{path}")
-            print("-"*80 + "\n")
+            print(f"✅ Serving index.html for SPA route: /{path}", flush=True)
+            print("-"*80 + "\n", flush=True)
+            sys.stdout.flush()
             return send_from_directory(dist_path, 'index.html')
         else:
-            print(f"❌ CRITICAL: index.html not found at {index_path}")
-            print("-"*80 + "\n")
+            print(f"❌ CRITICAL: index.html not found at {index_path}", flush=True)
+            print("-"*80 + "\n", flush=True)
+            sys.stdout.flush()
             return jsonify({
                 'error': 'index.html not found',
                 'index_path': index_path,
