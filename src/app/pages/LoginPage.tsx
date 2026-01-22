@@ -93,16 +93,6 @@ export const LoginPage = () => {
               {loading ? 'Connexion en cours...' : 'Se connecter'}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center">
-              <strong>Comptes de démonstration :</strong>
-            </p>
-            <div className="mt-3 space-y-2 text-sm text-gray-600">
-              <p>📚 École : <code className="bg-gray-100 px-2 py-1 rounded">school</code> / <code className="bg-gray-100 px-2 py-1 rounded">schoolpass</code></p>
-              <p>🎓 Étudiant : <code className="bg-gray-100 px-2 py-1 rounded">alice</code> / <code className="bg-gray-100 px-2 py-1 rounded">alicepass</code></p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
