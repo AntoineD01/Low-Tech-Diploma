@@ -27,7 +27,10 @@ if not MONGO_URI:
     print("ERROR: MONGO_URI environment variable is not set!")
     sys.exit(1)
 
-app = Flask(__name__, static_folder='dist', static_url_path='')
+# Don't use static_url_path='' as it conflicts with React Router
+# Let the catch-all route handle serving everything
+app = Flask(__name__)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching in development
 # Restrict CORS to specific origin (use '*' only for development)
 CORS(app, origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN != '*' else '*')
 
