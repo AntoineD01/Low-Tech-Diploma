@@ -404,7 +404,7 @@ Félicitations ! Votre diplôme "{data.get('degree_name')}" a été émis avec s
 Nom d\'utilisateur: {student_name}
 {('Mot de passe: ' + student_password) if account_created and student_password else ''}
 
-Connectez-vous sur: {ALLOWED_ORIGIN}/login.html
+Connectez-vous sur: {ALLOWED_ORIGIN}/login
 
 Vous pourrez consulter et télécharger votre diplôme dans la section "Mes diplômes".
 
@@ -560,7 +560,7 @@ Felicitations ! Votre diplome "{degree_name}" a ete emis avec succes.
 Nom d'utilisateur: {student_name}
 {('Mot de passe: ' + student_password) if account_created and student_password else ''}
 
-Connectez-vous sur: {ALLOWED_ORIGIN}/login.html
+Connectez-vous sur: {ALLOWED_ORIGIN}/login
 
 Veuillez trouver votre diplome en piece jointe au format PDF.
 
