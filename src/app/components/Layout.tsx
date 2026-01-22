@@ -18,9 +18,9 @@ export const Layout = ({ children }: LayoutProps) => {
       <nav className="bg-[#2c3e50] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <Shield className="h-8 w-8" />
-              <span className="text-xl">DiplomaChain</span>
+            <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <img src="/logo.png" alt="LowtechDiploma Logo" className="h-10 w-10" />
+              <span className="text-xl font-semibold">LowtechDiploma</span>
             </Link>
 
             <div className="flex items-center gap-6">
@@ -100,7 +100,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <footer className="bg-[#2c3e50] text-white mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
-            <p className="text-sm">© 2026 DiplomaChain - Plateforme sécurisée de vérification de diplômes</p>
+            <p className="text-sm">© 2026 LowtechDiploma - Plateforme sécurisée de vérification de diplômes</p>
             <p className="text-xs mt-2 text-gray-400">Utilisant la vérification cryptographique pour garantir l'authenticité</p>
           </div>
         </div>
