@@ -106,6 +106,18 @@ def internal_error(error):
     print("="*80 + "\n")
     return jsonify(error_info), 500
 
+# -----------------------------
+# REQUEST LOGGING MIDDLEWARE
+# -----------------------------
+@app.before_request
+def log_request():
+    """Log all incoming requests before routing"""
+    print("\n" + "🔵"*40)
+    print(f"📨 INCOMING REQUEST: {request.method} {request.path}")
+    print(f"   Full URL: {request.url}")
+    print(f"   Endpoint will be: {request.endpoint if hasattr(request, 'endpoint') else 'unknown'}")
+    print("🔵"*40 + "\n")
+
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -782,6 +794,21 @@ def login():
         return jsonify({"token": token})
 
     return jsonify({"error": "Invalid credentials"}), 401
+
+# -----------------------------
+# DEBUG ROUTES (can remove in production)
+# -----------------------------
+@app.route("/debug/routes", methods=["GET"])
+def debug_routes():
+    """List all registered routes for debugging"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': sorted(rule.methods - {'HEAD', 'OPTIONS'}),
+            'path': str(rule)
+        })
+    return jsonify(sorted(routes, key=lambda x: x['path']))
 
 # -----------------------------
 # SERVE REACT FRONTEND
