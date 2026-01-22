@@ -186,17 +186,6 @@ L'application inclut un système de logging complet :
 - [docs/FRONTEND_SETUP.md](docs/FRONTEND_SETUP.md) - Configuration frontend
 - [docs/KOYEB_QUICKSTART.md](docs/KOYEB_QUICKSTART.md) - Déploiement Koyeb
 
-## 👥 Comptes par Défaut
-
-### Compte École
-- **Username:** `school`
-- **Password:** `schoolpass`
-
-### Compte Étudiant (exemple)
-- **Username:** `alice`
-- **Password:** `alicepass`
-
-*Note: Changez ces mots de passe en production !*
 
 ## 📝 Licence
 
