@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { API_BASE_URL } from '@/config';
 
 export interface Diploma {
@@ -54,7 +54,7 @@ export const DiplomaProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const loadDiplomas = async () => {
+  const loadDiplomas = useCallback(async () => {
     const currentToken = getToken();
     if (!currentToken) {
       setDiplomas([]);
@@ -78,11 +78,11 @@ export const DiplomaProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to load diplomas:', error);
       setDiplomas([]);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     loadDiplomas();
-  }, [token]);
+  }, [loadDiplomas]);
 
   const issueDiploma = async (data: { studentName: string; studentEmail: string; title: string }): Promise<string> => {
     const token = getToken();
